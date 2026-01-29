@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { resolveStateDir } from "@/lib/clawdbot/paths";
+import type { ProjectTile } from "@/lib/projects/types";
 import { resolveAgentWorkspaceDir } from "./agentWorkspace";
 
 export const resolveAgentStateDir = (agentId: string) => {
@@ -26,4 +27,21 @@ export const deleteAgentArtifacts = (projectId: string, agentId: string, warning
 
   const agentDir = resolveAgentStateDir(agentId);
   deleteDirIfExists(agentDir, "Agent state", warnings);
+};
+
+export const collectAgentIdsAndDeleteArtifacts = (
+  projectId: string,
+  tiles: ProjectTile[],
+  warnings: string[]
+): string[] => {
+  const agentIds: string[] = [];
+  for (const tile of tiles) {
+    if (!tile.agentId?.trim()) {
+      warnings.push(`Missing agentId for tile ${tile.id}; skipped agent cleanup.`);
+      continue;
+    }
+    deleteAgentArtifacts(projectId, tile.agentId, warnings);
+    agentIds.push(tile.agentId);
+  }
+  return agentIds;
 };
