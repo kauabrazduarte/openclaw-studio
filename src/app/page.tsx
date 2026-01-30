@@ -431,149 +431,6 @@ const AgentCanvasPage = () => {
     };
   }, [buildAllowedModelKeys, client, status]);
 
-  useEffect(() => {
-    if (status !== "connected") return;
-    void loadSummarySnapshot();
-  }, [loadSummarySnapshot, status]);
-
-  useEffect(() => {
-    if (status !== "connected") return;
-    const unsubscribe = client.onEvent((event: EventFrame) => {
-      if (event.event !== "presence" && event.event !== "heartbeat") return;
-      if (summaryRefreshRef.current !== null) {
-        window.clearTimeout(summaryRefreshRef.current);
-      }
-      summaryRefreshRef.current = window.setTimeout(() => {
-        summaryRefreshRef.current = null;
-        void loadSummarySnapshot();
-      }, 750);
-    });
-    return () => {
-      if (summaryRefreshRef.current !== null) {
-        window.clearTimeout(summaryRefreshRef.current);
-        summaryRefreshRef.current = null;
-      }
-      unsubscribe();
-    };
-  }, [client, loadSummarySnapshot, status]);
-
-  useEffect(() => {
-    const node = viewportRef.current;
-    if (!node) return;
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      const { width, height } = entry.contentRect;
-      setViewportSize({ width, height });
-    });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (showArchived) return;
-    if (activeProject && activeProject.archivedAt) {
-      const fallback = state.projects.find((entry) => !entry.archivedAt) ?? null;
-      if ((fallback?.id ?? null) !== state.activeProjectId) {
-        dispatch({ type: "setActiveProject", projectId: fallback?.id ?? null });
-      }
-    }
-  }, [activeProject, dispatch, showArchived, state.activeProjectId, state.projects]);
-
-  useEffect(() => {
-    if (!state.selectedTileId) return;
-    if (tiles.some((tile) => tile.id === state.selectedTileId)) return;
-    dispatch({ type: "selectTile", tileId: null });
-  }, [dispatch, state.selectedTileId, tiles]);
-
-  const handleNewAgent = useCallback(async () => {
-    if (!project || project.archivedAt) return;
-    const name = createRandomAgentName();
-    const result = await createTile(project.id, name, "coding");
-    if (!result) return;
-
-    const nextPosition = computeNewTilePosition(result.tile.size);
-    dispatch({
-      type: "updateTile",
-      projectId: project.id,
-      tileId: result.tile.id,
-      patch: { position: nextPosition },
-    });
-    dispatch({ type: "selectTile", tileId: result.tile.id });
-  }, [computeNewTilePosition, createTile, dispatch, project]);
-
-  const handleLoadHistory = useCallback(
-    async (tileId: string) => {
-      if (!project) return;
-      await loadTileHistory(project.id, tileId);
-    },
-    [loadTileHistory, project]
-  );
-
-  const loadTileHistory = useCallback(
-    async (projectId: string, tileId: string) => {
-      const currentProject = stateRef.current.projects.find(
-        (entry) => entry.id === projectId
-      );
-      const tile = currentProject?.tiles.find((entry) => entry.id === tileId);
-      const sessionKey = tile?.sessionKey?.trim();
-      if (!tile || !sessionKey) return;
-      if (historyInFlightRef.current.has(sessionKey)) return;
-
-      historyInFlightRef.current.add(sessionKey);
-      try {
-        const result = await client.call<ChatHistoryResult>("chat.history", {
-          sessionKey,
-          limit: 200,
-        });
-        const { lines, lastAssistant, lastRole, lastUser } = buildHistoryLines(
-          result.messages ?? []
-        );
-        if (lines.length === 0) return;
-        const currentLines = tile.outputLines;
-        const mergedLines = mergeHistoryWithPending(lines, currentLines);
-        const isSame =
-          mergedLines.length === currentLines.length &&
-          mergedLines.every((line, index) => line === currentLines[index]);
-        if (isSame) {
-          if (!tile.runId && tile.status === "running" && lastRole === "assistant") {
-            dispatch({
-              type: "updateTile",
-              projectId,
-              tileId,
-              patch: { status: "idle", runId: null, streamText: null, thinkingTrace: null },
-            });
-          }
-          return;
-        }
-        const patch: Partial<AgentTile> = {
-          outputLines: mergedLines,
-          lastResult: lastAssistant ?? null,
-          ...(lastAssistant ? { latestPreview: lastAssistant } : {}),
-          ...(lastUser ? { lastUserMessage: lastUser } : {}),
-        };
-        if (!tile.runId && tile.status === "running" && lastRole === "assistant") {
-          patch.status = "idle";
-          patch.runId = null;
-          patch.streamText = null;
-          patch.thinkingTrace = null;
-        }
-        dispatch({
-          type: "updateTile",
-          projectId,
-          tileId,
-          patch,
-        });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Failed to load chat history.";
-        console.error(msg);
-      } finally {
-        historyInFlightRef.current.delete(sessionKey);
-      }
-    },
-    [client, dispatch]
-  );
-
   const loadSummarySnapshot = useCallback(async () => {
     const projects = stateRef.current.projects;
     const tiles = projects.flatMap((entry) => entry.tiles);
@@ -646,6 +503,149 @@ const AgentCanvasPage = () => {
       logger.error("Failed to load summary snapshot.", err);
     }
   }, [client, dispatch]);
+
+  useEffect(() => {
+    if (status !== "connected") return;
+    void loadSummarySnapshot();
+  }, [loadSummarySnapshot, status]);
+
+  useEffect(() => {
+    if (status !== "connected") return;
+    const unsubscribe = client.onEvent((event: EventFrame) => {
+      if (event.event !== "presence" && event.event !== "heartbeat") return;
+      if (summaryRefreshRef.current !== null) {
+        window.clearTimeout(summaryRefreshRef.current);
+      }
+      summaryRefreshRef.current = window.setTimeout(() => {
+        summaryRefreshRef.current = null;
+        void loadSummarySnapshot();
+      }, 750);
+    });
+    return () => {
+      if (summaryRefreshRef.current !== null) {
+        window.clearTimeout(summaryRefreshRef.current);
+        summaryRefreshRef.current = null;
+      }
+      unsubscribe();
+    };
+  }, [client, loadSummarySnapshot, status]);
+
+  useEffect(() => {
+    const node = viewportRef.current;
+    if (!node) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      setViewportSize({ width, height });
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (showArchived) return;
+    if (activeProject && activeProject.archivedAt) {
+      const fallback = state.projects.find((entry) => !entry.archivedAt) ?? null;
+      if ((fallback?.id ?? null) !== state.activeProjectId) {
+        dispatch({ type: "setActiveProject", projectId: fallback?.id ?? null });
+      }
+    }
+  }, [activeProject, dispatch, showArchived, state.activeProjectId, state.projects]);
+
+  useEffect(() => {
+    if (!state.selectedTileId) return;
+    if (tiles.some((tile) => tile.id === state.selectedTileId)) return;
+    dispatch({ type: "selectTile", tileId: null });
+  }, [dispatch, state.selectedTileId, tiles]);
+
+  const handleNewAgent = useCallback(async () => {
+    if (!project || project.archivedAt) return;
+    const name = createRandomAgentName();
+    const result = await createTile(project.id, name, "coding");
+    if (!result) return;
+
+    const nextPosition = computeNewTilePosition(result.tile.size);
+    dispatch({
+      type: "updateTile",
+      projectId: project.id,
+      tileId: result.tile.id,
+      patch: { position: nextPosition },
+    });
+    dispatch({ type: "selectTile", tileId: result.tile.id });
+  }, [computeNewTilePosition, createTile, dispatch, project]);
+
+  const loadTileHistory = useCallback(
+    async (projectId: string, tileId: string) => {
+      const currentProject = stateRef.current.projects.find(
+        (entry) => entry.id === projectId
+      );
+      const tile = currentProject?.tiles.find((entry) => entry.id === tileId);
+      const sessionKey = tile?.sessionKey?.trim();
+      if (!tile || !sessionKey) return;
+      if (historyInFlightRef.current.has(sessionKey)) return;
+
+      historyInFlightRef.current.add(sessionKey);
+      try {
+        const result = await client.call<ChatHistoryResult>("chat.history", {
+          sessionKey,
+          limit: 200,
+        });
+        const { lines, lastAssistant, lastRole, lastUser } = buildHistoryLines(
+          result.messages ?? []
+        );
+        if (lines.length === 0) return;
+        const currentLines = tile.outputLines;
+        const mergedLines = mergeHistoryWithPending(lines, currentLines);
+        const isSame =
+          mergedLines.length === currentLines.length &&
+          mergedLines.every((line, index) => line === currentLines[index]);
+        if (isSame) {
+          if (!tile.runId && tile.status === "running" && lastRole === "assistant") {
+            dispatch({
+              type: "updateTile",
+              projectId,
+              tileId,
+              patch: { status: "idle", runId: null, streamText: null, thinkingTrace: null },
+            });
+          }
+          return;
+        }
+        const patch: Partial<AgentTile> = {
+          outputLines: mergedLines,
+          lastResult: lastAssistant ?? null,
+          ...(lastAssistant ? { latestPreview: lastAssistant } : {}),
+          ...(lastUser ? { lastUserMessage: lastUser } : {}),
+        };
+        if (!tile.runId && tile.status === "running" && lastRole === "assistant") {
+          patch.status = "idle";
+          patch.runId = null;
+          patch.streamText = null;
+          patch.thinkingTrace = null;
+        }
+        dispatch({
+          type: "updateTile",
+          projectId,
+          tileId,
+          patch,
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to load chat history.";
+        console.error(msg);
+      } finally {
+        historyInFlightRef.current.delete(sessionKey);
+      }
+    },
+    [client, dispatch]
+  );
+
+  const handleLoadHistory = useCallback(
+    async (tileId: string) => {
+      if (!project) return;
+      await loadTileHistory(project.id, tileId);
+    },
+    [loadTileHistory, project]
+  );
 
   const handleSend = useCallback(
     async (tileId: string, sessionKey: string, message: string) => {
