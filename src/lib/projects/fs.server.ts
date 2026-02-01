@@ -1,7 +1,7 @@
-import fs from "node:fs";
 import path from "node:path";
 
 import { resolveStateDir } from "@/lib/clawdbot/paths";
+import { deleteDirRecursiveIfExists } from "@/lib/fs.server";
 import type { ProjectTile } from "@/lib/projects/types";
 
 export const resolveAgentStateDir = (agentId: string) => {
@@ -9,15 +9,10 @@ export const resolveAgentStateDir = (agentId: string) => {
 };
 
 export const deleteDirIfExists = (targetPath: string, label: string, warnings: string[]) => {
-  if (!fs.existsSync(targetPath)) {
+  const result = deleteDirRecursiveIfExists(targetPath);
+  if (!result.deleted) {
     warnings.push(`${label} not found at ${targetPath}.`);
-    return;
   }
-  const stat = fs.statSync(targetPath);
-  if (!stat.isDirectory()) {
-    throw new Error(`${label} path is not a directory: ${targetPath}`);
-  }
-  fs.rmSync(targetPath, { recursive: true, force: false });
 };
 
 export const deleteAgentArtifacts = (_projectId: string, agentId: string, warnings: string[]) => {

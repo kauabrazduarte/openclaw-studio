@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { assertIsFile, deleteFileIfExists, ensureDir, ensureFile } from "@/lib/fs.server";
+
 import {
   WORKSPACE_FILE_NAMES,
   isWorkspaceFileName,
@@ -13,38 +15,20 @@ const DEFAULT_AGENTS_LINE =
   "End every reply with a final line in this exact format: Summary: <one plain-English sentence>. Do not add any text after the Summary line. Keep it on a single line, no markdown, no extra punctuation.";
 const DEFAULT_AGENTS_CONTENT = `${DEFAULT_AGENTS_LINE}\n`;
 
-const ensureDir = (dir: string) => {
-  if (fs.existsSync(dir)) {
-    const stat = fs.statSync(dir);
-    if (!stat.isDirectory()) {
-      throw new Error(`${dir} exists and is not a directory.`);
-    }
-    return;
-  }
-  fs.mkdirSync(dir, { recursive: true });
-};
-
-const ensureFile = (filePath: string, contents: string) => {
-  if (fs.existsSync(filePath)) {
-    return;
-  }
-  fs.writeFileSync(filePath, contents, "utf8");
-};
-
 const ensureAgentsFile = (workspaceDir: string) => {
   const filePath = path.join(workspaceDir, "AGENTS.md");
   if (!fs.existsSync(filePath)) {
     fs.writeFileSync(filePath, DEFAULT_AGENTS_CONTENT, "utf8");
     return;
   }
-  const stat = fs.statSync(filePath);
-  if (!stat.isFile()) {
-    throw new Error("AGENTS.md exists but is not a file.");
-  }
+
+  assertIsFile(filePath, "AGENTS.md");
+
   const current = fs.readFileSync(filePath, "utf8");
   if (current.includes(DEFAULT_AGENTS_LINE)) {
     return;
   }
+
   let nextContent = current;
   if (nextContent.includes(PREVIOUS_AGENTS_LINE)) {
     nextContent = nextContent.replace(PREVIOUS_AGENTS_LINE, DEFAULT_AGENTS_LINE);
@@ -53,24 +37,15 @@ const ensureAgentsFile = (workspaceDir: string) => {
     fs.writeFileSync(filePath, nextContent, "utf8");
     return;
   }
+
   const trimmed = nextContent.trimEnd();
   if (!trimmed) {
     fs.writeFileSync(filePath, DEFAULT_AGENTS_CONTENT, "utf8");
     return;
   }
+
   const next = `${trimmed}\n\n${DEFAULT_AGENTS_LINE}\n`;
   fs.writeFileSync(filePath, next, "utf8");
-};
-
-const deleteFileIfExists = (filePath: string) => {
-  if (!fs.existsSync(filePath)) {
-    return;
-  }
-  const stat = fs.statSync(filePath);
-  if (!stat.isFile()) {
-    return;
-  }
-  fs.rmSync(filePath);
 };
 
 export const readWorkspaceFile = (workspaceDir: string, name: WorkspaceFileName) => {

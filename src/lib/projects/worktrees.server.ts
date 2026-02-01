@@ -3,6 +3,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { resolveStateDir } from "@/lib/clawdbot/paths";
+import { ensureDir } from "@/lib/fs.server";
 
 export const resolveAgentCanvasDir = (
   env: NodeJS.ProcessEnv = process.env,
@@ -47,7 +48,7 @@ export const ensureWorktreeIgnores = (worktreeDir: string, files: string[]) => {
   if (files.length === 0) return;
   const gitDir = resolveGitDir(worktreeDir);
   const infoDir = path.join(gitDir, "info");
-  fs.mkdirSync(infoDir, { recursive: true });
+  ensureDir(infoDir);
   const excludePath = path.join(infoDir, "exclude");
   const existing = fs.existsSync(excludePath) ? fs.readFileSync(excludePath, "utf8") : "";
   const lines = existing.split(/\r?\n/);
