@@ -30,9 +30,6 @@ describe("HeaderBar brain toggle", () => {
 
     render(
       createElement(HeaderBar, {
-        status: "connected",
-        gatewayUrl: "ws://localhost:18789",
-        agentCount: 2,
         onConnectionSettings: vi.fn(),
         onBrainFiles,
         brainFilesOpen: false,

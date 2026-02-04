@@ -20,6 +20,7 @@ const createAgent = (): AgentState => ({
   thinkingTrace: null,
   latestOverride: null,
   latestOverrideKind: null,
+  lastAssistantMessageAt: null,
   lastActivityAt: null,
   latestPreview: null,
   lastUserMessage: null,
