@@ -1,4 +1,10 @@
 import { GatewayResponseError, type GatewayClient } from "@/lib/gateway/GatewayClient";
+import {
+  readConfigAgentList,
+  upsertConfigAgentEntry,
+  writeConfigAgentList,
+  type ConfigAgentEntry,
+} from "@/lib/agents/configList";
 import type {
   AgentHeartbeat,
   AgentHeartbeatResult,
@@ -10,8 +16,6 @@ export type GatewayConfigSnapshot = {
   hash?: string;
   exists?: boolean;
 };
-
-type AgentEntry = Record<string, unknown> & { id: string };
 
 type HeartbeatBlock = Record<string, unknown> | null | undefined;
 
@@ -34,39 +38,6 @@ const coerceActiveHours = (value: unknown) => {
   const end = coerceString(value.end);
   if (!start || !end) return undefined;
   return { start, end };
-};
-
-const readAgentList = (config: Record<string, unknown> | undefined): AgentEntry[] => {
-  if (!config) return [];
-  const agents = isRecord(config.agents) ? config.agents : null;
-  const list = Array.isArray(agents?.list) ? agents?.list : [];
-  return list.filter(
-    (entry): entry is AgentEntry => isRecord(entry) && typeof entry.id === "string"
-  );
-};
-
-const writeAgentList = (config: Record<string, unknown>, list: AgentEntry[]) => {
-  const agents = isRecord(config.agents) ? { ...config.agents } : {};
-  return { ...config, agents: { ...agents, list } };
-};
-
-const upsertAgentEntry = (
-  list: AgentEntry[],
-  agentId: string,
-  updater: (entry: AgentEntry) => AgentEntry
-) => {
-  let updatedEntry: AgentEntry | null = null;
-  const nextList = list.map((entry) => {
-    if (entry.id !== agentId) return entry;
-    const next = updater({ ...entry, id: agentId });
-    updatedEntry = next;
-    return next;
-  });
-  if (!updatedEntry) {
-    updatedEntry = updater({ id: agentId });
-    nextList.push(updatedEntry);
-  }
-  return { list: nextList, entry: updatedEntry };
 };
 
 const mergeHeartbeat = (defaults: HeartbeatBlock, override: HeartbeatBlock) => {
@@ -132,7 +103,7 @@ export const resolveHeartbeatSettings = (
   config: Record<string, unknown>,
   agentId: string
 ): AgentHeartbeatResult => {
-  const list = readAgentList(config);
+  const list = readConfigAgentList(config);
   const entry = list.find((item) => item.id === agentId) ?? null;
   const defaults = readHeartbeatDefaults(config);
   const override =
@@ -194,8 +165,11 @@ export const renameGatewayAgent = async (params: {
   }
   const snapshot = await params.client.call<GatewayConfigSnapshot>("config.get", {});
   const baseConfig = isRecord(snapshot.config) ? snapshot.config : {};
-  const list = readAgentList(baseConfig);
-  const { list: nextList, entry } = upsertAgentEntry(list, params.agentId, (entry) => ({
+  const list = readConfigAgentList(baseConfig);
+  const { list: nextList, entry } = upsertConfigAgentEntry(
+    list,
+    params.agentId,
+    (entry: ConfigAgentEntry) => ({
     ...entry,
     name: trimmed,
   }));
@@ -217,7 +191,7 @@ export const deleteGatewayAgent = async (params: {
 }) => {
   const snapshot = await params.client.call<GatewayConfigSnapshot>("config.get", {});
   const baseConfig = isRecord(snapshot.config) ? snapshot.config : {};
-  const list = readAgentList(baseConfig);
+  const list = readConfigAgentList(baseConfig);
   const nextList = list.filter((entry) => entry.id !== params.agentId);
   const bindings = Array.isArray(baseConfig.bindings) ? baseConfig.bindings : [];
   const nextBindings = bindings.filter((binding) => {
@@ -256,8 +230,11 @@ export const updateGatewayHeartbeat = async (params: {
 }): Promise<AgentHeartbeatResult> => {
   const snapshot = await params.client.call<GatewayConfigSnapshot>("config.get", {});
   const baseConfig = isRecord(snapshot.config) ? snapshot.config : {};
-  const list = readAgentList(baseConfig);
-  const { list: nextList } = upsertAgentEntry(list, params.agentId, (entry) => {
+  const list = readConfigAgentList(baseConfig);
+  const { list: nextList } = upsertConfigAgentEntry(
+    list,
+    params.agentId,
+    (entry: ConfigAgentEntry) => {
     const next = { ...entry };
     if (params.payload.override) {
       next.heartbeat = buildHeartbeatOverride(params.payload.heartbeat);
@@ -274,6 +251,6 @@ export const updateGatewayHeartbeat = async (params: {
     exists: snapshot.exists,
     sessionKey: params.sessionKey,
   });
-  const nextConfig = writeAgentList(baseConfig, nextList);
+  const nextConfig = writeConfigAgentList(baseConfig, nextList);
   return resolveHeartbeatSettings(nextConfig, params.agentId);
 };

@@ -1,12 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import {
+  readConfigAgentList,
+  writeConfigAgentList,
+  type ConfigAgentEntry,
+} from "@/lib/agents/configList";
 import { resolveConfigPathCandidates, resolveStateDir } from "@/lib/clawdbot/paths";
 
 type ClawdbotConfig = Record<string, unknown>;
 
-export type AgentEntry = Record<string, unknown> & {
-  id: string;
+export type AgentEntry = ConfigAgentEntry & {
   name?: string;
   workspace?: string;
 };
@@ -38,13 +42,10 @@ export const saveClawdbotConfig = (configPath: string, config: ClawdbotConfig) =
 };
 
 export const readAgentList = (config: Record<string, unknown>): AgentEntry[] => {
-  const agents = (config.agents ?? {}) as Record<string, unknown>;
-  const list = Array.isArray(agents.list) ? agents.list : [];
-  return list.filter((entry): entry is AgentEntry => Boolean(entry && typeof entry === "object"));
+  return readConfigAgentList(config);
 };
 
 export const writeAgentList = (config: Record<string, unknown>, list: AgentEntry[]) => {
-  const agents = (config.agents ?? {}) as Record<string, unknown>;
-  agents.list = list;
-  config.agents = agents;
+  const next = writeConfigAgentList(config, list);
+  config.agents = next.agents;
 };
