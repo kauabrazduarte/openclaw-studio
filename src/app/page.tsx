@@ -25,7 +25,11 @@ import {
 } from "@/lib/text/message-metadata";
 import { useGatewayConnection } from "@/lib/gateway/useGatewayConnection";
 import type { EventFrame } from "@/lib/gateway/frames";
-import type { GatewayModelChoice } from "@/lib/gateway/models";
+import {
+  buildGatewayModelChoices,
+  type GatewayModelChoice,
+  type GatewayModelPolicySnapshot,
+} from "@/lib/gateway/models";
 import {
   AgentStoreProvider,
   getFilteredAgents,
@@ -34,9 +38,13 @@ import {
   useAgentStore,
 } from "@/features/agents/state/store";
 import {
+  buildHistorySyncPatch,
+  buildSummarySnapshotPatches,
   classifyGatewayEventKind,
   type AgentEventPayload,
   type ChatEventPayload,
+  type SummaryPreviewSnapshot,
+  type SummaryStatusSnapshot,
   dedupeRunLines,
   getAgentSummaryPatch,
   getChatSummaryPatch,
@@ -50,9 +58,11 @@ import type { CronJobSummary } from "@/lib/cron/types";
 import { logger } from "@/lib/logger";
 import { renameGatewayAgent, deleteGatewayAgent } from "@/lib/gateway/agentConfig";
 import {
+  extractStudioSessionEntries,
   parseAgentIdFromSessionKey,
   buildAgentStudioSessionKey,
   isSameSessionKey,
+  reconcileStudioSessionSelection,
 } from "@/lib/gateway/sessionKeys";
 import { buildAvatarDataUrl } from "@/lib/avatars/multiavatar";
 import { getStudioSettingsCoordinator } from "@/lib/studio/coordinator";
@@ -67,17 +77,6 @@ type ChatHistoryResult = {
   sessionId?: string;
   messages: ChatHistoryMessage[];
   thinkingLevel?: string;
-};
-
-type GatewayConfigSnapshot = {
-  config?: {
-    agents?: {
-      defaults?: {
-        model?: string | { primary?: string; fallbacks?: string[] };
-        models?: Record<string, { alias?: string }>;
-      };
-    };
-  };
 };
 
 type AgentsListResult = {
@@ -97,23 +96,6 @@ type AgentsListResult = {
   }>;
 };
 
-type SessionPreviewItem = {
-  role: "user" | "assistant" | "tool" | "system" | "other";
-  text: string;
-  timestamp?: number | string;
-};
-
-type SessionsPreviewEntry = {
-  key: string;
-  status: "ok" | "empty" | "missing" | "error";
-  items: SessionPreviewItem[];
-};
-
-type SessionsPreviewResult = {
-  ts: number;
-  previews: SessionsPreviewEntry[];
-};
-
 type SessionsListEntry = {
   key: string;
   updatedAt?: number | null;
@@ -123,18 +105,6 @@ type SessionsListEntry = {
 
 type SessionsListResult = {
   sessions?: SessionsListEntry[];
-};
-
-type SessionStatusSummary = {
-  key: string;
-  updatedAt: number | null;
-};
-
-type StatusSummary = {
-  sessions?: {
-    recent?: SessionStatusSummary[];
-    byAgent?: Array<{ agentId: string; recent: SessionStatusSummary[] }>;
-  };
 };
 
 type MobilePane = "fleet" | "chat" | "settings" | "brain";
@@ -201,59 +171,6 @@ const extractMessageTimestamp = (message: unknown): number | null => {
   );
 };
 
-const buildHistoryLines = (messages: ChatHistoryMessage[]) => {
-  const lines: string[] = [];
-  let lastAssistant: string | null = null;
-  let lastAssistantAt: number | null = null;
-  let lastRole: string | null = null;
-  let lastUser: string | null = null;
-  for (const message of messages) {
-    const role = typeof message.role === "string" ? message.role : "other";
-    const extracted = extractText(message);
-    const text = stripUiMetadata(extracted?.trim() ?? "");
-    const thinking =
-      role === "assistant" ? formatThinkingMarkdown(extractThinking(message) ?? "") : "";
-    const toolLines = extractToolLines(message);
-    if (!text && !thinking && toolLines.length === 0) continue;
-    if (role === "user") {
-      if (text && isHeartbeatPrompt(text)) {
-        continue;
-      }
-      if (text) {
-        lines.push(`> ${text}`);
-        lastUser = text;
-      }
-      lastRole = "user";
-    } else if (role === "assistant") {
-      const at = extractMessageTimestamp(message);
-      if (typeof at === "number") {
-        lastAssistantAt = at;
-      }
-      if (thinking) {
-        lines.push(thinking);
-      }
-      if (toolLines.length > 0) {
-        lines.push(...toolLines);
-      }
-      if (text) {
-        lines.push(text);
-        lastAssistant = text;
-      }
-      lastRole = "assistant";
-    } else if (toolLines.length > 0) {
-      lines.push(...toolLines);
-    } else if (text) {
-      lines.push(text);
-    }
-  }
-  const deduped: string[] = [];
-  for (const line of lines) {
-    if (deduped[deduped.length - 1] === line) continue;
-    deduped.push(line);
-  }
-  return { lines: deduped, lastAssistant, lastAssistantAt, lastRole, lastUser };
-};
-
 const extractReasoningBody = (value: string): string | null => {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -297,29 +214,6 @@ const findLatestHeartbeatResponse = (messages: ChatHistoryMessage[]) => {
     }
   }
   return latestResponse;
-};
-
-const mergeHistoryWithPending = (historyLines: string[], currentLines: string[]) => {
-  if (currentLines.length === 0) return historyLines;
-  if (historyLines.length === 0) return historyLines;
-  const merged = [...historyLines];
-  let cursor = 0;
-  for (const line of currentLines) {
-    let foundIndex = -1;
-    for (let i = cursor; i < merged.length; i += 1) {
-      if (merged[i] === line) {
-        foundIndex = i;
-        break;
-      }
-    }
-    if (foundIndex !== -1) {
-      cursor = foundIndex + 1;
-      continue;
-    }
-    merged.splice(cursor, 0, line);
-    cursor += 1;
-  }
-  return merged;
 };
 
 const findAgentBySessionKey = (agents: AgentState[], sessionKey: string): string | null => {
@@ -424,55 +318,6 @@ const AgentStudioPage = () => {
     link.setAttribute("data-agent-favicon", "true");
     document.head.appendChild(link);
   }, [faviconHref]);
-
-  const resolveConfiguredModelKey = useCallback(
-    (raw: string, models?: Record<string, { alias?: string }>) => {
-      const trimmed = raw.trim();
-      if (!trimmed) return null;
-      if (trimmed.includes("/")) return trimmed;
-      if (models) {
-        const target = Object.entries(models).find(
-          ([, entry]) => entry?.alias?.trim().toLowerCase() === trimmed.toLowerCase()
-        );
-        if (target?.[0]) return target[0];
-      }
-      return `anthropic/${trimmed}`;
-    },
-    []
-  );
-
-  const buildAllowedModelKeys = useCallback(
-    (snapshot: GatewayConfigSnapshot | null) => {
-      const allowedList: string[] = [];
-      const allowedSet = new Set<string>();
-      const defaults = snapshot?.config?.agents?.defaults;
-      const modelDefaults = defaults?.model;
-      const modelAliases = defaults?.models;
-      const pushKey = (raw?: string | null) => {
-        if (!raw) return;
-        const resolved = resolveConfiguredModelKey(raw, modelAliases);
-        if (!resolved) return;
-        if (allowedSet.has(resolved)) return;
-        allowedSet.add(resolved);
-        allowedList.push(resolved);
-      };
-      if (typeof modelDefaults === "string") {
-        pushKey(modelDefaults);
-      } else if (modelDefaults && typeof modelDefaults === "object") {
-        pushKey(modelDefaults.primary ?? null);
-        for (const fallback of modelDefaults.fallbacks ?? []) {
-          pushKey(fallback);
-        }
-      }
-      if (modelAliases) {
-        for (const key of Object.keys(modelAliases)) {
-          pushKey(key);
-        }
-      }
-      return allowedList;
-    },
-    [resolveConfiguredModelKey]
-  );
 
   const summarizeThinkingMessage = useCallback((message: unknown) => {
     if (!message || typeof message !== "object") {
@@ -672,11 +517,8 @@ const AgentStudioPage = () => {
     setLoading(true);
     try {
       const agentsResult = await client.call<AgentsListResult>("agents.list", {});
-      type StudioSessionEntry = { key: string; sessionId: string; updatedAt: number };
-      type StudioSessionsForAgent = { agentId: string; entries: StudioSessionEntry[] };
       const studioSessionsByAgent = await Promise.all(
-        agentsResult.agents.map(async (agent): Promise<StudioSessionsForAgent> => {
-          const prefix = `agent:${agent.id}:studio:`;
+        agentsResult.agents.map(async (agent) => {
           try {
             const sessions = await client.call<SessionsListResult>("sessions.list", {
               agentId: agent.id,
@@ -685,36 +527,24 @@ const AgentStudioPage = () => {
               limit: 64,
             });
             const entries = Array.isArray(sessions.sessions) ? sessions.sessions : [];
-            const studioEntries = entries
-              .map((entry): StudioSessionEntry | null => {
-                const key = entry.key?.trim();
-                if (!key || !key.startsWith(prefix)) return null;
-                const suffix = key.slice(prefix.length).trim();
-                if (!suffix) return null;
-                const updatedAt = typeof entry.updatedAt === "number" ? entry.updatedAt : 0;
-                return { key, sessionId: suffix, updatedAt };
-              })
-              .filter((entry): entry is StudioSessionEntry => Boolean(entry))
-              .sort((a, b) => b.updatedAt - a.updatedAt);
-            return { agentId: agent.id, entries: studioEntries };
+            return {
+              agentId: agent.id,
+              entries: extractStudioSessionEntries(agent.id, entries),
+            };
           } catch (err) {
             logger.error("Failed to list sessions while resolving studio session.", err);
             return { agentId: agent.id, entries: [] };
           }
         })
       );
-      const allStudioSessions = studioSessionsByAgent
-        .flatMap((group) => group.entries)
-        .sort((a, b) => b.updatedAt - a.updatedAt);
-      const hadPersistedSessionId = Boolean(studioSessionIdRef.current?.trim());
-      let sessionId = studioSessionIdRef.current?.trim() ?? "";
-      const hasPersistedSession =
-        sessionId.length > 0 && allStudioSessions.some((entry) => entry.sessionId === sessionId);
-      if (!sessionId || (allStudioSessions.length > 0 && !hasPersistedSession)) {
-        sessionId = allStudioSessions[0]?.sessionId ?? generateUUID();
-        studioSessionIdRef.current = sessionId;
-      }
-      if (!hadPersistedSessionId || !hasPersistedSession) {
+      const sessionSelection = reconcileStudioSessionSelection({
+        studioSessionsByAgent,
+        persistedSessionId: studioSessionIdRef.current,
+        generatedSessionId: generateUUID(),
+      });
+      const sessionId = sessionSelection.sessionId;
+      studioSessionIdRef.current = sessionId;
+      if (sessionSelection.shouldPersistSession) {
         const key = gatewayUrl.trim();
         if (key) {
           try {
@@ -738,23 +568,8 @@ const AgentStudioPage = () => {
           avatarUrl,
         };
       });
-      const existingSessions = new Set<string>();
-      const staleStudioKeys: string[] = [];
-      for (const seed of seeds) {
-        const sessionsForAgent = studioSessionsByAgent.find(
-          (entry) => entry.agentId === seed.agentId
-        )?.entries;
-        if (!sessionsForAgent || sessionsForAgent.length === 0) continue;
-        const active = sessionsForAgent.find(
-          (entry) => entry.sessionId === sessionId
-        );
-        if (!active) continue;
-        existingSessions.add(active.key);
-        for (const entry of sessionsForAgent) {
-          if (entry.key === active.key) continue;
-          staleStudioKeys.push(entry.key);
-        }
-      }
+      const existingSessions = new Set(sessionSelection.existingSessionKeys);
+      const staleStudioKeys = sessionSelection.staleStudioKeys;
       if (staleStudioKeys.length > 0) {
         await Promise.all(
           staleStudioKeys.map(async (key) => {
@@ -920,9 +735,9 @@ const AgentStudioPage = () => {
     }
     let cancelled = false;
     const loadModels = async () => {
-      let configSnapshot: GatewayConfigSnapshot | null = null;
+      let configSnapshot: GatewayModelPolicySnapshot | null = null;
       try {
-        configSnapshot = await client.call<GatewayConfigSnapshot>("config.get", {});
+        configSnapshot = await client.call<GatewayModelPolicySnapshot>("config.get", {});
       } catch (err) {
         logger.error("Failed to load gateway config.", err);
       }
@@ -933,26 +748,7 @@ const AgentStudioPage = () => {
         );
         if (cancelled) return;
         const catalog = Array.isArray(result.models) ? result.models : [];
-        const allowedKeys = buildAllowedModelKeys(configSnapshot);
-        if (allowedKeys.length === 0) {
-          setGatewayModels(catalog);
-          setGatewayModelsError(null);
-          return;
-        }
-        const filtered = catalog.filter((entry) =>
-          allowedKeys.includes(`${entry.provider}/${entry.id}`)
-        );
-        const filteredKeys = new Set(
-          filtered.map((entry) => `${entry.provider}/${entry.id}`)
-        );
-        const extras: GatewayModelChoice[] = [];
-        for (const key of allowedKeys) {
-          if (filteredKeys.has(key)) continue;
-          const [provider, id] = key.split("/");
-          if (!provider || !id) continue;
-          extras.push({ provider, id, name: key });
-        }
-        setGatewayModels([...filtered, ...extras]);
+        setGatewayModels(buildGatewayModelChoices(catalog, configSnapshot));
         setGatewayModelsError(null);
       } catch (err) {
         if (cancelled) return;
@@ -967,7 +763,7 @@ const AgentStudioPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [buildAllowedModelKeys, client, status]);
+  }, [client, status]);
 
   const loadSummarySnapshot = useCallback(async () => {
     const activeAgents = stateRef.current.agents.filter((agent) => agent.sessionCreated);
@@ -981,67 +777,23 @@ const AgentStudioPage = () => {
     if (sessionKeys.length === 0) return;
     try {
       const [statusSummary, previewResult] = await Promise.all([
-        client.call<StatusSummary>("status", {}),
-        client.call<SessionsPreviewResult>("sessions.preview", {
+        client.call<SummaryStatusSnapshot>("status", {}),
+        client.call<SummaryPreviewSnapshot>("sessions.preview", {
           keys: sessionKeys,
           limit: 8,
           maxChars: 240,
         }),
       ]);
-      const previewMap = new Map<string, SessionsPreviewEntry>();
-      for (const entry of previewResult.previews ?? []) {
-        previewMap.set(entry.key, entry);
-      }
-      const activityByKey = new Map<string, number>();
-      const addActivity = (entries?: SessionStatusSummary[]) => {
-        if (!entries) return;
-        for (const entry of entries) {
-          if (!entry?.key || typeof entry.updatedAt !== "number") continue;
-          activityByKey.set(entry.key, entry.updatedAt);
-        }
-      };
-      addActivity(statusSummary.sessions?.recent);
-      for (const group of statusSummary.sessions?.byAgent ?? []) {
-        addActivity(group.recent);
-      }
-      for (const agent of activeAgents) {
-        const patch: Partial<AgentState> = {};
-        const activity = activityByKey.get(agent.sessionKey);
-        if (typeof activity === "number") {
-          patch.lastActivityAt = activity;
-        }
-        const preview = previewMap.get(agent.sessionKey);
-        if (preview?.items?.length) {
-          const latestItem = preview.items[preview.items.length - 1];
-          if (latestItem?.role === "assistant") {
-            const previewTs = toTimestampMs(latestItem.timestamp);
-            if (typeof previewTs === "number") {
-              patch.lastAssistantMessageAt = previewTs;
-            } else if (typeof activity === "number") {
-              patch.lastAssistantMessageAt = activity;
-            }
-          }
-          const lastAssistant = [...preview.items]
-            .reverse()
-            .find((item) => item.role === "assistant");
-          const lastUser = [...preview.items]
-            .reverse()
-            .find((item) => item.role === "user");
-          if (lastAssistant?.text) {
-            const cleaned = stripUiMetadata(lastAssistant.text);
-            patch.latestPreview = cleaned;
-          }
-          if (lastUser?.text) {
-            patch.lastUserMessage = stripUiMetadata(lastUser.text);
-          }
-        }
-        if (Object.keys(patch).length > 0) {
-          dispatch({
-            type: "updateAgent",
-            agentId: agent.agentId,
-            patch,
-          });
-        }
+      for (const entry of buildSummarySnapshotPatches({
+        agents: activeAgents,
+        statusSummary,
+        previewResult,
+      })) {
+        dispatch({
+          type: "updateAgent",
+          agentId: entry.agentId,
+          patch: entry.patch,
+        });
       }
     } catch (err) {
       logger.error("Failed to load summary snapshot.", err);
@@ -1092,56 +844,13 @@ const AgentStudioPage = () => {
           sessionKey,
           limit: 200,
         });
-        const { lines, lastAssistant, lastAssistantAt, lastRole, lastUser } = buildHistoryLines(
-          result.messages ?? []
-        );
-        if (lines.length === 0) {
-          dispatch({
-            type: "updateAgent",
-            agentId,
-            patch: { historyLoadedAt: loadedAt },
-          });
-          return;
-        }
-        const currentLines = agent.outputLines;
-        const mergedLines = mergeHistoryWithPending(lines, currentLines);
-        const isSame =
-          mergedLines.length === currentLines.length &&
-          mergedLines.every((line, index) => line === currentLines[index]);
-        if (isSame) {
-          const patch: Partial<AgentState> = { historyLoadedAt: loadedAt };
-          if (typeof lastAssistantAt === "number") {
-            patch.lastAssistantMessageAt = lastAssistantAt;
-          }
-          if (!agent.runId && agent.status === "running" && lastRole === "assistant") {
-            patch.status = "idle";
-            patch.runId = null;
-            patch.streamText = null;
-            patch.thinkingTrace = null;
-          }
-          dispatch({
-            type: "updateAgent",
-            agentId,
-            patch,
-          });
-          return;
-        }
-        const patch: Partial<AgentState> = {
-          outputLines: mergedLines,
-          lastResult: lastAssistant ?? null,
-          ...(lastAssistant ? { latestPreview: lastAssistant } : {}),
-          ...(typeof lastAssistantAt === "number"
-            ? { lastAssistantMessageAt: lastAssistantAt }
-            : {}),
-          ...(lastUser ? { lastUserMessage: lastUser } : {}),
-          historyLoadedAt: loadedAt,
-        };
-        if (!agent.runId && agent.status === "running" && lastRole === "assistant") {
-          patch.status = "idle";
-          patch.runId = null;
-          patch.streamText = null;
-          patch.thinkingTrace = null;
-        }
+        const patch = buildHistorySyncPatch({
+          messages: result.messages ?? [],
+          currentLines: agent.outputLines,
+          loadedAt,
+          status: agent.status,
+          runId: agent.runId,
+        });
         dispatch({
           type: "updateAgent",
           agentId,
