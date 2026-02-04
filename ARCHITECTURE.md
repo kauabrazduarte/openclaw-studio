@@ -28,10 +28,11 @@ Non-goals:
 This keeps feature cohesion high while preserving a clear client/server boundary.
 
 ## Main modules / bounded contexts
-- **Focused agent UI** (`src/features/agents`): focused agent panel, fleet sidebar, inspect panel, and local in-memory state + actions. Agents render a status-first summary and latest-update preview driven by gateway events. Gateway event classification (`presence`/`heartbeat` summary refresh and `chat`/`agent` runtime streams) is centralized in bridge helpers (`src/features/agents/state/runtimeEventBridge.ts`) and consumed from one gateway subscription path in `src/app/page.tsx`. Session setting mutations (model/thinking) are centralized in `src/features/agents/state/sessionSettingsMutations.ts` so optimistic state updates and sync/error behavior stay aligned. Full transcripts load only on explicit “Load history” actions.
+- **Focused agent UI** (`src/features/agents`): focused agent panel, fleet sidebar, inspect panel, and local in-memory state + actions. The fleet sidebar includes a `New Agent` action that calls gateway config patching and works for both local and remote gateways. Agents render a status-first summary and latest-update preview driven by gateway events. Per-agent runtime controls (`model`, `thinking`) live in the chat header (`AgentChatPanel`), while settings sidebar actions are focused on rename, display toggles, new session, and delete (`AgentSettingsPanel`). Gateway event classification (`presence`/`heartbeat` summary refresh and `chat`/`agent` runtime streams) is centralized in bridge helpers (`src/features/agents/state/runtimeEventBridge.ts`) and consumed from one gateway subscription path in `src/app/page.tsx`. Session setting mutations (model/thinking) are centralized in `src/features/agents/state/sessionSettingsMutations.ts` so optimistic state updates and sync/error behavior stay aligned. Full transcripts load only on explicit “Load history” actions.
 - **Studio settings** (`src/lib/studio`, `src/app/api/studio`): local settings store for gateway URL/token and focused preferences (`src/lib/studio/settings.ts`, `src/lib/studio/settings.server.ts`, `src/app/api/studio/route.ts`). `src/lib/studio/coordinator.ts` now owns both the `/api/studio` transport helpers and shared client-side load/patch scheduling for gateway, focused, and studio-session settings.
 - **Gateway** (`src/lib/gateway`): WebSocket client for agent runtime (frames, connect, request/response). Session settings sync transport (`sessions.patch`) is centralized in `src/lib/gateway/sessionSettings.ts`. The OpenClaw control UI client is vendored in `src/lib/gateway/openclaw/GatewayBrowserClient.ts` with a sync script at `scripts/sync-openclaw-gateway-client.ts`.
-- **Gateway-backed config + agent-file edits** (`src/lib/gateway/agentConfig.ts`, `src/app/api/gateway/tools/route.ts`): agent rename/heartbeat via `config.get` + `config.patch`, agent file read/write via `/tools/invoke` proxy.
+- **Gateway-backed config + agent-file edits** (`src/lib/gateway/agentConfig.ts`, `src/app/api/gateway/tools/route.ts`): agent create/rename/heartbeat/delete via `config.get` + `config.patch`, agent file read/write via `/tools/invoke` proxy.
+- **Session lifecycle actions** (`src/features/agents/state/agentSessionActions.ts`, `src/app/page.tsx`): per-agent “New session” resets local runtime transcript state and switches to a fresh studio session key for subsequent runs.
 - **Local OpenClaw config + paths** (`src/lib/clawdbot`): state/config/.env path resolution with `OPENCLAW_*` env overrides (`src/lib/clawdbot/paths.ts`). Local config access is used for optional Discord provisioning and local path/config helpers; shared local config list helpers live in `src/lib/clawdbot/config.ts` and are reused by Discord provisioning. Gateway URL/token in Studio are sourced from studio settings.
 - **Shared agent config-list helpers** (`src/lib/agents/configList.ts`): pure `agents.list` read/write/upsert helpers reused by both gateway config patching (`src/lib/gateway/agentConfig.ts`) and local config access (`src/lib/clawdbot/config.ts`) to keep list-shape semantics aligned.
 - **Discord integration** (`src/lib/discord`, API route): channel provisioning and config binding (local gateway only).
@@ -72,11 +73,11 @@ Flow:
 
 ### 3) Agent config + agent files
 - **Agent files**: `AGENTS.md`, `SOUL.md`, `IDENTITY.md`, `USER.md`, `TOOLS.md`, `HEARTBEAT.md`, `MEMORY.md`.
-- **Heartbeat + rename**: stored in the gateway config and updated via `config.get` + `config.patch`.
+- **Create + heartbeat + rename**: stored in the gateway config and updated via `config.get` + `config.patch`.
  - **Tool policy**: the gateway build must expose coding tools on `/tools/invoke`, and any tool allowlists must permit `read`/`write`/`edit`/`apply_patch` for the target agent (otherwise `/tools/invoke` returns 404).
 
 Flow:
-1. UI requests heartbeat data via gateway `config.get` (client WS) and applies overrides via `config.patch` (`src/lib/gateway/agentConfig.ts`).
+1. UI creates/renames/deletes agents and requests heartbeat data via gateway `config.get` + `config.patch` (`src/lib/gateway/agentConfig.ts`).
 2. Agent file edits call `/api/gateway/tools`, which proxies to the gateway `/tools/invoke` endpoint with `read`/`write` and a session key.
 3. UI reflects persisted state returned by the gateway.
 
@@ -85,7 +86,7 @@ Flow:
 - **Discord**: API route calls `createDiscordChannelForAgent`, uses `DISCORD_BOT_TOKEN` from the resolved state-dir `.env`, and updates local `openclaw.json` bindings.
 
 ### 5) Session settings synchronization
-- **UI boundary**: `AgentSettingsPanel` emits model/thinking callbacks; `src/app/page.tsx` delegates both through one mutation helper.
+- **UI boundary**: `AgentChatPanel` emits model/thinking callbacks from the agent header; `src/app/page.tsx` delegates both through one mutation helper.
 - **Mutation boundary**: `applySessionSettingMutation` in `src/features/agents/state/sessionSettingsMutations.ts` owns optimistic store updates, `sessionCreated` guard logic, sync success updates, and user-facing failure lines.
 - **Transport boundary**: `syncGatewaySessionSettings` in `src/lib/gateway/sessionSettings.ts` is the only client-side builder/invoker for `sessions.patch` payloads.
 
@@ -104,7 +105,7 @@ Flow:
 - **Local settings file over DB**: fast, local-first persistence for gateway connection + focused preferences; trade-off is no concurrency or multi-user support.
 - **WebSocket gateway direct to client**: lowest latency for streaming; trade-off is tighter coupling to the gateway protocol in the UI.
 - **Gateway-first agent records**: records map 1:1 to `agents.list` entries with main sessions; trade-off is no local-only agent concept.
-- **Gateway-backed config + agent-file edits**: rename/heartbeat via `config.patch`, agent files via `/tools/invoke`; trade-off is reliance on gateway availability and tool allowlists.
+- **Gateway-backed config + agent-file edits**: create/rename/heartbeat/delete via `config.patch`, agent files via `/tools/invoke`; trade-off is reliance on gateway availability and tool allowlists.
 - **Narrow local config mutation boundary**: local `openclaw.json` writes are limited to explicit local-only flows (currently Discord provisioning), and reuse shared list helpers instead of ad-hoc mutation paths; trade-off is less flexibility for local-only experimentation, but clearer ownership and lower drift risk.
 - **Shared `agents.list` helper layer**: gateway and local config paths now consume one pure helper module for list parsing/writing/upsert behavior; trade-off is one more shared dependency, but it reduces semantic drift and duplicate bug surface.
 - **Single gateway settings endpoint**: `/api/studio` is the sole Studio gateway URL/token source; trade-off is migration pressure on any older local-config-based callers, but it removes ambiguous ownership and dead paths.

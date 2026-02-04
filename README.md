@@ -17,6 +17,9 @@ OpenClaw Studio solves this. It's a Next.js app that connects to your OpenClaw g
 
 - Shows you every agent at a glance
 - Runs a focused agent-management UI (fleet list + primary agent + inspect sidebar)
+- Creates new agents directly from the fleet sidebar (`New Agent`)
+- Lets you change per-agent runtime model/thinking directly from the agent header
+- Keeps per-agent management actions in settings (rename, display toggles, new session, delete)
 - Reads and edits agent files (AGENTS.md, MEMORY.md, etc.) via the gateway
 - Streams tool output in real time
 - Provisions Discord channels when you need them
@@ -64,6 +67,7 @@ Your gateway config lives in `openclaw.json` in your state directory. Defaults:
 - Gateway URL: `ws://127.0.0.1:18789`
 
 Studio stores its own settings locally at `~/.openclaw/openclaw-studio/settings.json` (gateway URL/token + focused preferences).
+Agent create/rename/delete actions in Studio mutate gateway config through `config.patch`, so `openclaw.json` is updated on the **gateway host** (local machine for local gateways, remote host for EC2/remote gateways).
 
 Optional overrides:
 - `OPENCLAW_STATE_DIR`

@@ -5,6 +5,7 @@ import {
   writeConfigAgentList,
   type ConfigAgentEntry,
 } from "@/lib/agents/configList";
+import { slugifyName } from "@/lib/ids/slugify";
 import type {
   AgentHeartbeat,
   AgentHeartbeatResult,
@@ -173,6 +174,43 @@ export const renameGatewayAgent = async (params: {
     ...entry,
     name: trimmed,
   }));
+  const patch = { agents: { list: nextList } };
+  await applyGatewayConfigPatch({
+    client: params.client,
+    patch,
+    baseHash: snapshot.hash ?? undefined,
+    exists: snapshot.exists,
+    sessionKey: params.sessionKey,
+  });
+  return entry;
+};
+
+const createUniqueAgentId = (name: string, list: ConfigAgentEntry[]) => {
+  const base = slugifyName(name);
+  const existing = new Set(list.map((entry) => entry.id));
+  if (!existing.has(base)) return base;
+  for (let suffix = 2; suffix < 100000; suffix += 1) {
+    const candidate = `${base}-${suffix}`;
+    if (!existing.has(candidate)) return candidate;
+  }
+  throw new Error("Unable to allocate a unique agent ID.");
+};
+
+export const createGatewayAgent = async (params: {
+  client: GatewayClient;
+  name: string;
+  sessionKey?: string;
+}): Promise<ConfigAgentEntry> => {
+  const trimmed = params.name.trim();
+  if (!trimmed) {
+    throw new Error("Agent name is required.");
+  }
+  const snapshot = await params.client.call<GatewayConfigSnapshot>("config.get", {});
+  const baseConfig = isRecord(snapshot.config) ? snapshot.config : {};
+  const list = readConfigAgentList(baseConfig);
+  const id = createUniqueAgentId(trimmed, list);
+  const entry: ConfigAgentEntry = { id, name: trimmed };
+  const nextList = [...list, entry];
   const patch = { agents: { list: nextList } };
   await applyGatewayConfigPatch({
     client: params.client,

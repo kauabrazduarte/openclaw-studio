@@ -56,7 +56,11 @@ import { fetchCronJobs } from "@/lib/cron/client";
 import type { AgentStoreSeed, AgentState } from "@/features/agents/state/store";
 import type { CronJobSummary } from "@/lib/cron/types";
 import { logger } from "@/lib/logger";
-import { renameGatewayAgent, deleteGatewayAgent } from "@/lib/gateway/agentConfig";
+import {
+  createGatewayAgent,
+  renameGatewayAgent,
+  deleteGatewayAgent,
+} from "@/lib/gateway/agentConfig";
 import {
   extractStudioSessionEntries,
   parseAgentIdFromSessionKey,
@@ -69,6 +73,8 @@ import { getStudioSettingsCoordinator } from "@/lib/studio/coordinator";
 import { resolveFocusedPreference, resolveStudioSessionId } from "@/lib/studio/settings";
 import { generateUUID } from "@/lib/gateway/openclaw/uuid";
 import { applySessionSettingMutation } from "@/features/agents/state/sessionSettingsMutations";
+import { buildNewSessionAgentPatch } from "@/features/agents/state/agentSessionActions";
+import { syncGatewaySessionSettings } from "@/lib/gateway/sessionSettings";
 
 type ChatHistoryMessage = Record<string, unknown>;
 
@@ -226,6 +232,20 @@ const findAgentByRunId = (agents: AgentState[], runId: string): string | null =>
   return match ? match.agentId : null;
 };
 
+const resolveNextNewAgentName = (agents: AgentState[]) => {
+  const baseName = "New Agent";
+  const existing = new Set(
+    agents.map((agent) => agent.name.trim().toLowerCase()).filter((name) => name.length > 0)
+  );
+  const baseLower = baseName.toLowerCase();
+  if (!existing.has(baseLower)) return baseName;
+  for (let index = 2; index < 10000; index += 1) {
+    const candidate = `${baseName} ${index}`;
+    if (!existing.has(candidate.toLowerCase())) return candidate;
+  }
+  throw new Error("Unable to allocate a unique agent name.");
+};
+
 const AgentStudioPage = () => {
   const [settingsCoordinator] = useState(() => getStudioSettingsCoordinator());
   const {
@@ -251,6 +271,7 @@ const AgentStudioPage = () => {
   const summaryRefreshRef = useRef<number | null>(null);
   const [gatewayModels, setGatewayModels] = useState<GatewayModelChoice[]>([]);
   const [gatewayModelsError, setGatewayModelsError] = useState<string | null>(null);
+  const [createAgentBusy, setCreateAgentBusy] = useState(false);
   const [mobilePane, setMobilePane] = useState<MobilePane>("chat");
   const [settingsAgentId, setSettingsAgentId] = useState<string | null>(null);
   const [brainPanelOpen, setBrainPanelOpen] = useState(false);
@@ -918,6 +939,64 @@ const AgentStudioPage = () => {
     [agents, client, loadAgents, setError]
   );
 
+  const handleCreateAgent = useCallback(async () => {
+    if (createAgentBusy) return;
+    if (status !== "connected") {
+      setError("Connect to gateway before creating an agent.");
+      return;
+    }
+    setCreateAgentBusy(true);
+    try {
+      const name = resolveNextNewAgentName(stateRef.current.agents);
+      const created = await createGatewayAgent({ client, name });
+      await loadAgents();
+      focusFilterTouchedRef.current = true;
+      setFocusFilter("all");
+      dispatch({ type: "selectAgent", agentId: created.id });
+      setSettingsAgentId(null);
+      setMobilePane("chat");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create agent.";
+      setError(message);
+    } finally {
+      setCreateAgentBusy(false);
+    }
+  }, [client, createAgentBusy, dispatch, loadAgents, setError, status]);
+
+  const handleNewSession = useCallback(
+    async (agentId: string) => {
+      const agent = agents.find((entry) => entry.agentId === agentId);
+      if (!agent) {
+        setError("Failed to start new session: agent not found.");
+        return;
+      }
+      try {
+        const sessionId = generateUUID().trim();
+        const patch = buildNewSessionAgentPatch(agent, sessionId);
+        clearRunTracking(agent.runId);
+        historyInFlightRef.current.delete(agent.sessionKey);
+        specialUpdateRef.current.delete(agentId);
+        specialUpdateInFlightRef.current.delete(agentId);
+        dispatch({
+          type: "updateAgent",
+          agentId,
+          patch,
+        });
+        setSettingsAgentId(null);
+        setMobilePane("chat");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to start new session.";
+        setError(message);
+        dispatch({
+          type: "appendOutput",
+          agentId,
+          line: `New session failed: ${message}`,
+        });
+      }
+    },
+    [agents, clearRunTracking, dispatch, setError]
+  );
+
   useEffect(() => {
     if (status !== "connected") return;
     const hasRunning = agents.some((agent) => agent.status === "running");
@@ -1479,6 +1558,7 @@ const AgentStudioPage = () => {
 
   const connectionPanelVisible = showConnectionPanel || status !== "connected";
   const hasAnyAgents = agents.length > 0;
+  const showFleetLayout = hasAnyAgents || status === "connected";
 
   return (
     <div className="relative min-h-screen w-screen overflow-hidden bg-background">
@@ -1525,7 +1605,7 @@ const AgentStudioPage = () => {
           </div>
         ) : null}
 
-        {hasAnyAgents ? (
+        {showFleetLayout ? (
           <div className="flex min-h-0 flex-1 flex-col gap-4 xl:flex-row">
             <div className="glass-panel p-2 xl:hidden" data-testid="mobile-pane-toggle">
               <div className="grid grid-cols-4 gap-2">
@@ -1589,6 +1669,11 @@ const AgentStudioPage = () => {
                 selectedAgentId={focusedAgent?.agentId ?? state.selectedAgentId}
                 filter={focusFilter}
                 onFilterChange={handleFocusFilterChange}
+                onCreateAgent={() => {
+                  void handleCreateAgent();
+                }}
+                createDisabled={status !== "connected" || createAgentBusy || state.loading}
+                createBusy={createAgentBusy}
                 onSelectAgent={(agentId) => {
                   dispatch({ type: "selectAgent", agentId });
                   setMobilePane("chat");
@@ -1626,7 +1711,12 @@ const AgentStudioPage = () => {
                 />
               ) : (
                 <EmptyStatePanel
-                  title="No agents match this filter."
+                  title={hasAnyAgents ? "No agents match this filter." : "No agents available."}
+                  description={
+                    hasAnyAgents
+                      ? undefined
+                      : "Use New Agent in the sidebar to add your first agent."
+                  }
                   fillHeight
                   className="items-center p-6 text-center text-sm"
                 />
@@ -1658,7 +1748,7 @@ const AgentStudioPage = () => {
                     setMobilePane("chat");
                   }}
                   onRename={(name) => handleRenameAgent(settingsAgent.agentId, name)}
-                  onNewSession={() => {}}
+                  onNewSession={() => handleNewSession(settingsAgent.agentId)}
                   onDelete={() => handleDeleteAgent(settingsAgent.agentId)}
                   onToolCallingToggle={(enabled) =>
                     handleToolCallingToggle(settingsAgent.agentId, enabled)
@@ -1675,11 +1765,7 @@ const AgentStudioPage = () => {
             <EmptyStatePanel
               label="Fleet"
               title="No agents available"
-              description={
-                status === "connected"
-                  ? "Connected to gateway, but no agents are currently configured."
-                  : "Connect to your gateway to load agents into the studio."
-              }
+              description="Connect to your gateway to load agents into the studio."
               detail={gatewayUrl || "Gateway URL is empty"}
               fillHeight
               className="items-center px-6 py-10 text-center"

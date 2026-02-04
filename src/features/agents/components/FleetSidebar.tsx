@@ -9,6 +9,9 @@ type FleetSidebarProps = {
   filter: FocusFilter;
   onFilterChange: (next: FocusFilter) => void;
   onSelectAgent: (agentId: string) => void;
+  onCreateAgent: () => void;
+  createDisabled?: boolean;
+  createBusy?: boolean;
 };
 
 const FILTER_OPTIONS: Array<{ value: FocusFilter; label: string; testId: string }> = [
@@ -40,6 +43,9 @@ export const FleetSidebar = ({
   filter,
   onFilterChange,
   onSelectAgent,
+  onCreateAgent,
+  createDisabled = false,
+  createBusy = false,
 }: FleetSidebarProps) => {
   return (
     <aside
@@ -47,8 +53,17 @@ export const FleetSidebar = ({
       data-testid="fleet-sidebar"
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(90deg,color-mix(in_oklch,var(--primary)_8%,transparent)_0%,transparent_80%)]" />
-      <div className="px-1">
+      <div className="flex items-center justify-between gap-2 px-1">
         <p className="console-title text-2xl leading-none text-foreground">Agents ({agents.length})</p>
+        <button
+          type="button"
+          data-testid="fleet-new-agent-button"
+          className="rounded-md border border-transparent bg-primary/90 px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-primary-foreground transition hover:bg-primary disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground"
+          onClick={onCreateAgent}
+          disabled={createDisabled || createBusy}
+        >
+          {createBusy ? "Creating..." : "New Agent"}
+        </button>
       </div>
 
       <div className="flex flex-wrap gap-2">
