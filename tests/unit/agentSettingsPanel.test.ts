@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { AgentState } from "@/features/agents/state/store";
-import { AgentSettingsPanel } from "@/features/agents/components/AgentSettingsPanel";
+import { AgentSettingsPanel } from "@/features/agents/components/AgentInspectPanels";
 import type { CronJobSummary } from "@/lib/cron/types";
 import type { AgentHeartbeatSummary } from "@/lib/heartbeat/gateway";
 

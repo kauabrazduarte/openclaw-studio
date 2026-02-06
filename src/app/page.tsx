@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentChatPanel } from "@/features/agents/components/AgentChatPanel";
-import { AgentSettingsPanel } from "@/features/agents/components/AgentSettingsPanel";
-import { AgentBrainPanel } from "@/features/agents/components/AgentBrainPanel";
+import {
+  AgentBrainPanel,
+  AgentSettingsPanel,
+} from "@/features/agents/components/AgentInspectPanels";
 import { FleetSidebar } from "@/features/agents/components/FleetSidebar";
 import { HeaderBar } from "@/features/agents/components/HeaderBar";
 import { ConnectionPanel } from "@/features/agents/components/ConnectionPanel";

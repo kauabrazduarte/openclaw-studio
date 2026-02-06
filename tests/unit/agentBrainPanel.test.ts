@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { AgentState } from "@/features/agents/state/store";
-import { AgentBrainPanel } from "@/features/agents/components/AgentBrainPanel";
+import { AgentBrainPanel } from "@/features/agents/components/AgentInspectPanels";
 import type { GatewayClient } from "@/lib/gateway/GatewayClient";
 
 const createAgent = (agentId: string, name: string, sessionKey: string): AgentState => ({
