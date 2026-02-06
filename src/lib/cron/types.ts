@@ -73,6 +73,43 @@ export const resolveLatestCronJobForAgent = (
   return [...filtered].sort((a, b) => b.updatedAtMs - a.updatedAtMs)[0] ?? null;
 };
 
+const formatEveryMs = (everyMs: number) => {
+  if (everyMs % 3600000 === 0) {
+    return `${everyMs / 3600000}h`;
+  }
+  if (everyMs % 60000 === 0) {
+    return `${everyMs / 60000}m`;
+  }
+  if (everyMs % 1000 === 0) {
+    return `${everyMs / 1000}s`;
+  }
+  return `${everyMs}ms`;
+};
+
+export const formatCronSchedule = (schedule: CronSchedule) => {
+  if (schedule.kind === "every") {
+    return `Every ${formatEveryMs(schedule.everyMs)}`;
+  }
+  if (schedule.kind === "cron") {
+    return schedule.tz ? `Cron: ${schedule.expr} (${schedule.tz})` : `Cron: ${schedule.expr}`;
+  }
+  const atDate = new Date(schedule.at);
+  if (Number.isNaN(atDate.getTime())) return `At: ${schedule.at}`;
+  return `At: ${atDate.toLocaleString()}`;
+};
+
+export const formatCronPayload = (payload: CronPayload) => {
+  if (payload.kind === "systemEvent") return payload.text;
+  return payload.message;
+};
+
+export const formatCronJobDisplay = (job: CronJobSummary) => {
+  const lines = [job.name, formatCronSchedule(job.schedule), formatCronPayload(job.payload)].filter(
+    Boolean
+  );
+  return lines.join("\n");
+};
+
 export type CronListParams = {
   includeDisabled?: boolean;
 };
