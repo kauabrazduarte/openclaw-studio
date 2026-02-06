@@ -64,7 +64,6 @@ import {
   runCronJobNow,
 } from "@/lib/cron/gateway";
 import { filterCronJobsForAgent, resolveLatestCronJobForAgent } from "@/lib/cron/types";
-import { logger } from "@/lib/logger";
 import {
   createGatewayAgent,
   renameGatewayAgent,
@@ -501,7 +500,7 @@ const AgentStudioPage = () => {
         const message = err instanceof Error ? err.message : "Failed to load cron jobs.";
         setSettingsCronJobs([]);
         setSettingsCronError(message);
-        logger.error(message);
+        console.error(message);
       } finally {
         setSettingsCronLoading(false);
       }
@@ -526,7 +525,7 @@ const AgentStudioPage = () => {
         const message = err instanceof Error ? err.message : "Failed to load heartbeats.";
         setSettingsHeartbeats([]);
         setSettingsHeartbeatError(message);
-        logger.error(message);
+        console.error(message);
       } finally {
         setSettingsHeartbeatLoading(false);
       }
@@ -615,7 +614,7 @@ const AgentStudioPage = () => {
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to load latest cron/heartbeat update.";
-        logger.error(message);
+        console.error(message);
       } finally {
         specialUpdateInFlightRef.current.delete(key);
       }
@@ -677,7 +676,7 @@ const AgentStudioPage = () => {
               )
             );
           } catch (err) {
-            logger.error("Failed to list sessions while resolving agent session.", err);
+            console.error("Failed to list sessions while resolving agent session.", err);
             sessionKeysByAgent.set(agent.id, new Set());
           }
         })
@@ -797,7 +796,7 @@ const AgentStudioPage = () => {
         }
         setFocusFilter("all");
       } catch (err) {
-        logger.error("Failed to load focused preference.", err);
+        console.error("Failed to load focused preference.", err);
       } finally {
         if (!cancelled) {
           setFocusedPreferencesLoaded(true);
@@ -905,7 +904,7 @@ const AgentStudioPage = () => {
       try {
         configSnapshot = await client.call<GatewayModelPolicySnapshot>("config.get", {});
       } catch (err) {
-        logger.error("Failed to load gateway config.", err);
+        console.error("Failed to load gateway config.", err);
       }
       try {
         const result = await client.call<{ models: GatewayModelChoice[] }>(
@@ -922,7 +921,7 @@ const AgentStudioPage = () => {
           err instanceof Error ? err.message : "Failed to load models.";
         setGatewayModelsError(message);
         setGatewayModels([]);
-        logger.error("Failed to load gateway models.", err);
+        console.error("Failed to load gateway models.", err);
       }
     };
     void loadModels();
@@ -962,7 +961,7 @@ const AgentStudioPage = () => {
         });
       }
     } catch (err) {
-      logger.error("Failed to load summary snapshot.", err);
+      console.error("Failed to load summary snapshot.", err);
     }
   }, [client, dispatch]);
 
@@ -1184,7 +1183,7 @@ const AgentStudioPage = () => {
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to run cron job.";
         setSettingsCronError(message);
-        logger.error(message);
+        console.error(message);
       } finally {
         setCronRunBusyJobId((current) => (current === resolvedJobId ? null : current));
       }
@@ -1209,7 +1208,7 @@ const AgentStudioPage = () => {
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to delete cron job.";
         setSettingsCronError(message);
-        logger.error(message);
+        console.error(message);
       } finally {
         setCronDeleteBusyJobId((current) => (current === resolvedJobId ? null : current));
       }
@@ -1231,7 +1230,7 @@ const AgentStudioPage = () => {
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to trigger heartbeat.";
         setSettingsHeartbeatError(message);
-        logger.error(message);
+        console.error(message);
       } finally {
         setHeartbeatRunBusyId((current) =>
           current === resolvedHeartbeatId ? null : current
@@ -1261,7 +1260,7 @@ const AgentStudioPage = () => {
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to delete heartbeat.";
         setSettingsHeartbeatError(message);
-        logger.error(message);
+        console.error(message);
       } finally {
         setHeartbeatDeleteBusyId((current) =>
           current === resolvedHeartbeatId ? null : current
@@ -1587,7 +1586,7 @@ const AgentStudioPage = () => {
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to stop run.";
         setError(message);
-        logger.error(message);
+        console.error(message);
         dispatch({
           type: "appendOutput",
           agentId,

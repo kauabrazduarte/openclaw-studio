@@ -3,7 +3,6 @@ import path from "node:path";
 
 import { NextResponse } from "next/server";
 
-import { logger } from "@/lib/logger";
 import { resolveStateDir } from "@/lib/clawdbot/paths";
 import {
   defaultStudioSettings,
@@ -56,7 +55,7 @@ export async function GET() {
     return NextResponse.json({ settings });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to load studio settings.";
-    logger.error(message);
+    console.error(message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -71,7 +70,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ settings });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to save studio settings.";
-    logger.error(message);
+    console.error(message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

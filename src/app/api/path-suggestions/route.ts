@@ -4,7 +4,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { logger } from "@/lib/logger";
 import { resolveUserPath } from "@/lib/clawdbot/paths";
 
 export const runtime = "nodejs";
@@ -115,7 +114,7 @@ export async function GET(request: Request) {
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to list path suggestions.";
-    logger.error(message);
+    console.error(message);
     const status = message.includes("does not exist") ? 404 : 400;
     return NextResponse.json({ error: message }, { status });
   }

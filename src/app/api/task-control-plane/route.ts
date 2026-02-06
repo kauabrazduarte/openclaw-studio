@@ -1,7 +1,6 @@
 import * as childProcess from "node:child_process";
 import { NextResponse } from "next/server";
 
-import { logger } from "@/lib/logger";
 import { buildTaskControlPlaneSnapshot } from "@/lib/task-control-plane/read-model";
 
 export const runtime = "nodejs";
@@ -108,7 +107,7 @@ export async function GET() {
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to load task control plane data.";
-    logger.error(message);
+    console.error(message);
     if (isBeadsWorkspaceError(message)) {
       return NextResponse.json(
         {

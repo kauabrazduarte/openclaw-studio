@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { spawnSync } from "node:child_process";
 
 import { GET } from "@/app/api/task-control-plane/route";
-import { logger } from "@/lib/logger";
 import { buildTaskControlPlaneSnapshot } from "@/lib/task-control-plane/read-model";
 
 vi.mock("node:child_process", async () => {
@@ -21,19 +20,15 @@ vi.mock("@/lib/task-control-plane/read-model", () => ({
   buildTaskControlPlaneSnapshot: vi.fn(),
 }));
 
-vi.mock("@/lib/logger", () => ({
-  logger: { error: vi.fn() },
-}));
-
 const mockedSpawnSync = vi.mocked(spawnSync);
 const mockedBuildSnapshot = vi.mocked(buildTaskControlPlaneSnapshot);
-const mockedLogger = vi.mocked(logger.error);
+const mockedConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
 describe("task control plane route", () => {
   beforeEach(() => {
     mockedSpawnSync.mockReset();
     mockedBuildSnapshot.mockReset();
-    mockedLogger.mockReset();
+    mockedConsoleError.mockClear();
   });
 
   it("returns snapshot on success", async () => {
@@ -121,7 +116,7 @@ describe("task control plane route", () => {
 
     expect(response.status).toBe(400);
     expect(body.error).toContain("Beads workspace not initialized");
-    expect(mockedLogger).toHaveBeenCalled();
+    expect(mockedConsoleError).toHaveBeenCalled();
   });
 
   it("returns 502 for other failures", async () => {
@@ -137,6 +132,6 @@ describe("task control plane route", () => {
 
     expect(response.status).toBe(502);
     expect(body.error).toBe("boom");
-    expect(mockedLogger).toHaveBeenCalledWith("boom");
+    expect(mockedConsoleError).toHaveBeenCalledWith("boom");
   });
 });

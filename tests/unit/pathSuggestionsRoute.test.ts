@@ -4,13 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { logger } from "@/lib/logger";
-
 let tempHome: string | null = null;
-
-vi.mock("@/lib/logger", () => ({
-  logger: { error: vi.fn() },
-}));
 
 const setupHome = () => {
   tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-home-"));
@@ -40,11 +34,11 @@ beforeAll(async () => {
 beforeEach(setupHome);
 afterEach(cleanupHome);
 
-const mockedLogger = vi.mocked(logger.error);
+let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
 describe("/api/path-suggestions route", () => {
   beforeEach(() => {
-    mockedLogger.mockReset();
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   it("returns non-hidden entries for home by default", async () => {
@@ -77,7 +71,7 @@ describe("/api/path-suggestions route", () => {
 
     expect(response.status).toBe(400);
     expect(body.error).toMatch(/home/i);
-    expect(mockedLogger).toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalled();
   });
 
   it("returns 404 for missing directories", async () => {
@@ -88,6 +82,6 @@ describe("/api/path-suggestions route", () => {
 
     expect(response.status).toBe(404);
     expect(body.error).toMatch(/does not exist/i);
-    expect(mockedLogger).toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalled();
   });
 });

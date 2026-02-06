@@ -95,7 +95,7 @@ Flow:
 
 ## Cross-cutting concerns
 - **Configuration**: environment variables are read directly from `process.env` (for example `NEXT_PUBLIC_GATEWAY_URL` for the client’s default gateway URL); `lib/clawdbot/paths.ts` resolves config path and state dirs, honoring `OPENCLAW_STATE_DIR`/`OPENCLAW_CONFIG_PATH` and legacy fallbacks. Studio settings live under `<state dir>/openclaw-studio/settings.json`.
-- **Logging**: `src/lib/logger` (console wrappers) used in API routes and gateway client.
+- **Logging**: API routes and the gateway client use built-in `console.*` logging.
 - **Error handling**:
   - API routes return JSON `{ error }` with appropriate status.
   - `fetchJson` throws when `!res.ok`, surfaces errors to UI state.

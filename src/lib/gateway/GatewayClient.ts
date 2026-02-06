@@ -1,4 +1,3 @@
-import { logger } from "@/lib/logger";
 import type { EventFrame } from "./frames";
 import {
   GatewayBrowserClient,
@@ -102,11 +101,11 @@ export class GatewayClient {
         }
         this.updateStatus(this.manualDisconnect ? "disconnected" : "connecting");
         if (this.manualDisconnect) {
-          logger.info("Gateway disconnected.");
+          console.info("Gateway disconnected.");
         }
       },
       onGap: ({ expected, received }) => {
-        logger.warn(`Gateway event gap expected ${expected}, received ${received}.`);
+        console.warn(`Gateway event gap expected ${expected}, received ${received}.`);
       },
     });
 
@@ -132,7 +131,7 @@ export class GatewayClient {
     this.client = null;
     this.clearConnectPromise();
     this.updateStatus("disconnected");
-    logger.info("Gateway disconnected.");
+    console.info("Gateway disconnected.");
   }
 
   async call<T = unknown>(method: string, params: unknown): Promise<T> {
