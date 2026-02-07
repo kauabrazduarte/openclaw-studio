@@ -52,7 +52,6 @@ export const FleetSidebar = ({
       className="glass-panel fade-up-delay relative flex h-full w-full min-w-72 flex-col gap-3 p-3 xl:max-w-[320px]"
       data-testid="fleet-sidebar"
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(90deg,color-mix(in_oklch,var(--primary)_8%,transparent)_0%,transparent_80%)]" />
       <div className="flex items-center justify-between gap-2 px-1">
         <p className="console-title text-2xl leading-none text-foreground">Agents ({agents.length})</p>
         <button
