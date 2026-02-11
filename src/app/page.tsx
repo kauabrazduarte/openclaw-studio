@@ -1864,7 +1864,7 @@ const AgentStudioPage = () => {
 
         {connectionPanelVisible ? (
           <div className="pointer-events-none fixed inset-x-0 top-20 z-[140] flex justify-center px-3 sm:px-4 md:px-5">
-            <div className="glass-panel pointer-events-auto w-full max-w-4xl border border-border/80 px-4 py-4 sm:px-6 sm:py-6">
+            <div className="glass-panel pointer-events-auto w-full max-w-4xl border border-border/80 !bg-card px-4 py-4 sm:px-6 sm:py-6">
               <ConnectionPanel
                 gatewayUrl={gatewayUrl}
                 token={token}

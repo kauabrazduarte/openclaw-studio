@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { GatewayStatus } from "@/lib/gateway/GatewayClient";
-import { Brain, Ellipsis } from "lucide-react";
+import { Brain, Plug } from "lucide-react";
 
 type HeaderBarProps = {
   status: GatewayStatus;
@@ -42,7 +42,7 @@ export const HeaderBar = ({
   }, [menuOpen]);
 
   return (
-    <div className="glass-panel fade-up px-4 py-2">
+    <div className="glass-panel fade-up relative z-[180] px-4 py-2">
       <div className="grid items-center gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div className="min-w-0">
           <p className="console-title text-2xl leading-none text-foreground sm:text-3xl">
@@ -75,7 +75,7 @@ export const HeaderBar = ({
             Brain
           </button>
           {showConnectionSettings ? (
-            <div className="relative" ref={menuRef}>
+            <div className="relative z-[210]" ref={menuRef}>
               <button
                 type="button"
                 className="flex h-9 w-9 items-center justify-center rounded-md border border-input/80 bg-surface-3 text-muted-foreground transition hover:border-border hover:bg-surface-2 hover:text-foreground"
@@ -84,11 +84,11 @@ export const HeaderBar = ({
                 aria-expanded={menuOpen}
                 onClick={() => setMenuOpen((prev) => !prev)}
               >
-                <Ellipsis className="h-4 w-4" />
+                <Plug className="h-4 w-4" />
                 <span className="sr-only">Open studio menu</span>
               </button>
               {menuOpen ? (
-                <div className="absolute right-0 top-11 z-[130] min-w-44 rounded-md border border-border/80 bg-popover p-1">
+                <div className="absolute right-0 top-11 z-[260] min-w-44 rounded-md border border-border/80 bg-popover p-1">
                   <button
                     className="w-full rounded-sm px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.1em] text-foreground transition hover:bg-muted"
                     type="button"
