@@ -1789,7 +1789,6 @@ const AgentStudioPage = () => {
             onGatewayUrlChange={setGatewayUrl}
             onTokenChange={setToken}
             onConnect={() => void connect()}
-            onDisconnect={disconnect}
           />
         </div>
       </div>
