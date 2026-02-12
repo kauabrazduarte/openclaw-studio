@@ -147,6 +147,7 @@ export function createGatewayRuntimeEventHandler(
   const thinkingStreamByRun = new Map<string, string>();
   const thinkingStartedAtByRun = new Map<string, number>();
   const toolLinesSeenByRun = new Map<string, Set<string>>();
+  const terminalChatRunSeen = new Set<string>();
   const thinkingDebugBySession = new Set<string>();
   const lastActivityMarkByAgent = new Map<string, number>();
 
@@ -177,6 +178,16 @@ export function createGatewayRuntimeEventHandler(
     toolLinesSeenByRun.delete(runId);
   };
 
+  const markTerminalRunSeen = (runId: string) => {
+    terminalChatRunSeen.add(runId);
+    if (terminalChatRunSeen.size <= 512) return;
+    while (terminalChatRunSeen.size > 384) {
+      const first = terminalChatRunSeen.values().next();
+      if (first.done) break;
+      terminalChatRunSeen.delete(first.value);
+    }
+  };
+
   const markActivityThrottled = (agentId: string, at: number = now()) => {
     const lastAt = lastActivityMarkByAgent.get(agentId) ?? 0;
     if (at - lastAt < 300) return;
@@ -200,6 +211,7 @@ export function createGatewayRuntimeEventHandler(
     assistantStreamByRun.clear();
     thinkingStreamByRun.clear();
     toolLinesSeenByRun.clear();
+    terminalChatRunSeen.clear();
     thinkingDebugBySession.clear();
     lastActivityMarkByAgent.clear();
   };
@@ -281,7 +293,13 @@ export function createGatewayRuntimeEventHandler(
         clearRunTracking(payload.runId);
         return;
       }
+      if (payload.runId && terminalChatRunSeen.has(payload.runId)) {
+        return;
+      }
       clearPendingLivePatch(agentId);
+      if (payload.runId) {
+        markTerminalRunSeen(payload.runId);
+      }
       clearRunTracking(payload.runId ?? null);
       if (!nextThinking && role === "assistant" && !thinkingDebugBySession.has(payload.sessionKey)) {
         thinkingDebugBySession.add(payload.sessionKey);
@@ -372,7 +390,13 @@ export function createGatewayRuntimeEventHandler(
         clearRunTracking(payload.runId);
         return;
       }
+      if (payload.runId && terminalChatRunSeen.has(payload.runId)) {
+        return;
+      }
       clearPendingLivePatch(agentId);
+      if (payload.runId) {
+        markTerminalRunSeen(payload.runId);
+      }
       clearRunTracking(payload.runId ?? null);
       deps.dispatch({
         type: "appendOutput",
@@ -401,7 +425,13 @@ export function createGatewayRuntimeEventHandler(
         clearRunTracking(payload.runId);
         return;
       }
+      if (payload.runId && terminalChatRunSeen.has(payload.runId)) {
+        return;
+      }
       clearPendingLivePatch(agentId);
+      if (payload.runId) {
+        markTerminalRunSeen(payload.runId);
+      }
       clearRunTracking(payload.runId ?? null);
       deps.dispatch({
         type: "appendOutput",

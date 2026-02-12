@@ -1,5 +1,5 @@
 import { syncGatewaySessionSettings, type GatewayClient } from "@/lib/gateway/GatewayClient";
-import { buildAgentInstruction, formatMetaMarkdown } from "@/lib/text/message-extract";
+import { buildAgentInstruction } from "@/lib/text/message-extract";
 import type { AgentState } from "@/features/agents/state/store";
 import { randomUUID } from "@/lib/uuid";
 
@@ -67,11 +67,6 @@ export async function sendChatMessageViaStudio(params: {
       lastUserMessage: trimmed,
       lastActivityAt: now(),
     },
-  });
-  params.dispatch({
-    type: "appendOutput",
-    agentId,
-    line: formatMetaMarkdown({ role: "user", timestamp: now() }),
   });
   params.dispatch({
     type: "appendOutput",
