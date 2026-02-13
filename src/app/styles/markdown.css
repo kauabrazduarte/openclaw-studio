@@ -1,6 +1,6 @@
 .agent-markdown {
   display: block;
-  white-space: pre-wrap;
+  white-space: normal;
   word-break: break-word;
   line-height: 1.56;
 }
@@ -61,6 +61,10 @@
 
 .agent-markdown li {
   margin-top: 0.15rem;
+}
+
+.agent-markdown li > p {
+  margin: 0;
 }
 
 .agent-markdown code {
