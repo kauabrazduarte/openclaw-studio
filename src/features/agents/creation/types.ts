@@ -62,7 +62,6 @@ export type GuidedCreationControls = {
 export type GuidedAgentCreationDraft = {
   starterKit: AgentStarterKit;
   controlLevel: AgentControlLevel;
-  firstTask: string;
   customInstructions: string;
   userProfile: string;
   toolNotes: string;

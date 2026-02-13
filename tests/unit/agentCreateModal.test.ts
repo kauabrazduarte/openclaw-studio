@@ -117,6 +117,33 @@ describe("AgentCreateModal", () => {
     expect(screen.getByText("Can operate your system automatically.")).toBeInTheDocument();
   });
 
+  it("sets sandbox non-main when command execution is ask first", () => {
+    const onSubmit = vi.fn();
+    openModal({ onSubmit });
+
+    fireEvent.click(screen.getByRole("button", { name: "Product role" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show fine-tune capabilities" }));
+    fireEvent.click(screen.getByRole("button", { name: "Command execution ask first" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.change(screen.getByLabelText("Agent name"), {
+      target: { value: "Ask First Agent" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Launch agent" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        draft: expect.objectContaining({
+          controls: expect.objectContaining({
+            allowExec: true,
+            execAutonomy: "ask-first",
+            sandboxMode: "non-main",
+          }),
+        }),
+      })
+    );
+  });
+
   it("shows avatar controls on customize step and removes task/instruction inputs", () => {
     openModal();
 

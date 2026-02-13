@@ -448,6 +448,7 @@ export const AgentCreateModal = ({
             execAutonomy: "ask-first",
             approvalSecurity: "allowlist",
             approvalAsk: "always",
+            sandboxMode: "non-main",
           },
         };
       }

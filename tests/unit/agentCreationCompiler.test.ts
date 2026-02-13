@@ -14,7 +14,6 @@ const createDraft = (): GuidedAgentCreationDraft => {
     ...draft,
     starterKit: "engineer",
     controlLevel: "balanced",
-    firstTask: "Refactor React components and open small diffs.",
     customInstructions: "Prefer minimal, test-backed diffs.",
     userProfile: "Product engineer who prefers concise summaries.",
     toolNotes: "Use git history and markdown formatting conventions.",
@@ -58,6 +57,11 @@ describe("compileGuidedAgentCreation", () => {
     expect(result.agentOverrides.tools?.deny).toContain("write");
     expect(result.agentOverrides.tools?.deny).toContain("edit");
     expect(result.agentOverrides.tools?.deny).toContain("apply_patch");
+    expect(result.files["AGENTS.md"]).toBeUndefined();
+    expect(result.files["IDENTITY.md"]).toContain("Role: Research analyst");
+    expect(result.files["IDENTITY.md"]).toContain("Creature: Analyst Cartographer");
+    expect(result.files["SOUL.md"]).toContain("## Core Truths");
+    expect(result.files["SOUL.md"]).toContain("Evidence beats intuition when stakes are non-trivial.");
     expect(result.execApprovals).toBeNull();
   });
 
@@ -75,8 +79,12 @@ describe("compileGuidedAgentCreation", () => {
     });
 
     expect(result.validation.errors).toEqual([]);
-    expect(result.files["AGENTS.md"]).toContain("First Task");
-    expect(result.files["AGENTS.md"]).toContain("Refactor React components");
+    expect(Object.keys(result.files).sort()).toEqual(["IDENTITY.md", "SOUL.md"]);
+    expect(result.files["AGENTS.md"]).toBeUndefined();
+    expect(result.files["IDENTITY.md"]).toContain("Role: Software engineer");
+    expect(result.files["IDENTITY.md"]).toContain("Creature: Pragmatic Builder");
+    expect(result.files["SOUL.md"]).toContain("## Core Truths");
+    expect(result.files["SOUL.md"]).toContain("Small scoped changes reduce operational risk.");
     expect(result.agentOverrides.tools?.profile).toBe("coding");
     expect(result.agentOverrides.tools?.alsoAllow).toContain("group:runtime");
     expect(result.agentOverrides.tools?.deny).not.toContain("group:runtime");
@@ -110,6 +118,10 @@ describe("compileGuidedAgentCreation", () => {
     expect(result.agentOverrides.tools?.deny).toContain("write");
     expect(result.agentOverrides.tools?.deny).toContain("edit");
     expect(result.agentOverrides.tools?.deny).toContain("apply_patch");
+    expect(result.files["AGENTS.md"]).toBeUndefined();
+    expect(result.files["IDENTITY.md"]).toContain("Role: Marketing operator");
+    expect(result.files["IDENTITY.md"]).toContain("Creature: Signal Operator");
+    expect(result.files["SOUL.md"]).toContain("Message-market fit beats channel hacks.");
     expect(result.execApprovals).toBeNull();
   });
 
@@ -128,6 +140,24 @@ describe("compileGuidedAgentCreation", () => {
     });
 
     expect(result.validation.errors).toContain("Auto exec requires runtime tools to be enabled.");
+  });
+
+  it("normalizes sandbox mode to non-main when exec is enabled", () => {
+    const draft = createDraft();
+    draft.controls.allowExec = true;
+    draft.controls.execAutonomy = "ask-first";
+    draft.controls.sandboxMode = "off";
+
+    const result = compileGuidedAgentCreation({
+      name: "Sandbox Normalization Agent",
+      draft,
+    });
+
+    expect(result.validation.errors).toEqual([]);
+    expect(result.agentOverrides.sandbox).toEqual({
+      mode: "non-main",
+      workspaceAccess: draft.controls.workspaceAccess,
+    });
   });
 
   it("maps PR Engineer bundle to engineer + autopilot defaults", () => {

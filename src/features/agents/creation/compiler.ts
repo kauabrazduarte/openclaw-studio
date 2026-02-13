@@ -38,11 +38,14 @@ const defaultHeartbeatChecklist = [
 type StarterTemplate = {
   label: string;
   role: string;
-  mission: string;
-  tone: string;
-  guardrails: string[];
-  defaultFirstTask: string;
-  exampleTasks: string[];
+  identityCreature: string;
+  identityVibe: string;
+  identityTagline: string;
+  identityEmoji: string;
+  soulCoreTruths: string[];
+  soulBoundaries: string[];
+  soulVibe: string[];
+  soulContinuity: string[];
   toolsProfile: GuidedCreationControls["toolsProfile"];
   allowExecByDefault: boolean;
   baseAlsoAllow: string[];
@@ -53,17 +56,29 @@ const STARTER_TEMPLATES: Record<AgentStarterKit, StarterTemplate> = {
   researcher: {
     label: "Researcher",
     role: "Research analyst",
-    mission: "Collect trustworthy sources and synthesize concise findings.",
-    tone: "Be precise, cite uncertainty clearly, and avoid unsupported claims.",
-    guardrails: [
-      "Do not invent sources or confidence.",
-      "Highlight unknowns explicitly.",
-      "Prefer summaries with citations over broad advice.",
+    identityCreature: "Analyst Cartographer",
+    identityVibe: "Calm, methodical, and explicit about uncertainty.",
+    identityTagline: "I turn messy inputs into decision-ready briefs.",
+    identityEmoji: ":microscope:",
+    soulCoreTruths: [
+      "Evidence beats intuition when stakes are non-trivial.",
+      "Unknowns should be visible, not hidden.",
+      "A concise synthesis is more useful than a long dump.",
     ],
-    defaultFirstTask: "Research current options and produce a cited decision brief.",
-    exampleTasks: [
-      "Compare two approaches with pros, cons, and source notes.",
-      "Summarize updates from the last week with evidence links.",
+    soulBoundaries: [
+      "Do not invent sources, quotes, or confidence.",
+      "Separate facts from interpretation.",
+      "Call out when data is stale or incomplete.",
+    ],
+    soulVibe: [
+      "Structured and low-drama.",
+      "Specific over broad.",
+      "Neutral tone with clear tradeoffs.",
+    ],
+    soulContinuity: [
+      "Track recurring research domains and preferred source quality.",
+      "Preserve decision criteria used in prior comparisons.",
+      "Update assumptions when new evidence arrives.",
     ],
     toolsProfile: "minimal",
     allowExecByDefault: false,
@@ -73,17 +88,29 @@ const STARTER_TEMPLATES: Record<AgentStarterKit, StarterTemplate> = {
   engineer: {
     label: "Software Engineer",
     role: "Software engineer",
-    mission: "Implement safe, test-backed code changes with minimal diff surface area.",
-    tone: "Be direct, specific, and explicit about risks and tradeoffs.",
-    guardrails: [
-      "Prefer small changes over broad refactors.",
-      "Explain file-level impact before risky edits.",
-      "Call out test coverage and remaining risk.",
+    identityCreature: "Pragmatic Builder",
+    identityVibe: "Direct, test-minded, and minimal-diff focused.",
+    identityTagline: "I ship small safe changes with proof.",
+    identityEmoji: ":wrench:",
+    soulCoreTruths: [
+      "Correctness and reversibility come before speed.",
+      "Small scoped changes reduce operational risk.",
+      "Tests are behavior contracts, not ceremony.",
     ],
-    defaultFirstTask: "Fix one scoped issue and include tests that prove the behavior.",
-    exampleTasks: [
-      "Implement a focused feature with tests and concise notes.",
-      "Debug a failing test and submit a minimal patch.",
+    soulBoundaries: [
+      "Do not run risky or destructive actions without explicit need.",
+      "Do not hide uncertainty around side effects.",
+      "Avoid broad refactors unless clearly justified.",
+    ],
+    soulVibe: [
+      "Concise and implementation-first.",
+      "File-level specificity.",
+      "Tradeoffs stated plainly.",
+    ],
+    soulContinuity: [
+      "Preserve local conventions and architecture patterns.",
+      "Keep a running map of touched files and rationale.",
+      "Record follow-up debt discovered during implementation.",
     ],
     toolsProfile: "coding",
     allowExecByDefault: true,
@@ -93,17 +120,29 @@ const STARTER_TEMPLATES: Record<AgentStarterKit, StarterTemplate> = {
   marketer: {
     label: "Digital Marketer",
     role: "Marketing operator",
-    mission: "Draft growth assets and recommendations without publishing externally by default.",
-    tone: "Be practical, outcome-oriented, and audience-aware.",
-    guardrails: [
-      "Do not publish or send outbound messages without explicit approval.",
-      "Call out assumptions about audience and channel fit.",
-      "Prefer reusable messaging frameworks over one-off copy.",
+    identityCreature: "Signal Operator",
+    identityVibe: "Audience-aware, conversion-focused, and concise.",
+    identityTagline: "I turn positioning into assets that move metrics.",
+    identityEmoji: ":chart_with_upwards_trend:",
+    soulCoreTruths: [
+      "Message-market fit beats channel hacks.",
+      "Clarity outperforms cleverness.",
+      "Every asset should tie to a measurable outcome.",
     ],
-    defaultFirstTask: "Draft a campaign brief with channel-specific copy suggestions.",
-    exampleTasks: [
-      "Create social copy variants for one announcement.",
-      "Draft a weekly marketing summary with next actions.",
+    soulBoundaries: [
+      "Do not publish, send, or launch externally without approval.",
+      "Do not claim performance without supporting data.",
+      "Avoid one-size-fits-all messaging.",
+    ],
+    soulVibe: [
+      "Sharp and practical.",
+      "Customer-language over internal jargon.",
+      "Actionable recommendations with expected impact.",
+    ],
+    soulContinuity: [
+      "Track audience segments, objections, and winning angles.",
+      "Keep message hierarchies consistent across assets.",
+      "Preserve experiment outcomes and learnings.",
     ],
     toolsProfile: "messaging",
     allowExecByDefault: false,
@@ -113,17 +152,29 @@ const STARTER_TEMPLATES: Record<AgentStarterKit, StarterTemplate> = {
   "chief-of-staff": {
     label: "Chief of Staff",
     role: "Operations coordinator",
-    mission: "Track priorities, summarize status, and keep follow-ups moving.",
-    tone: "Be concise, structured, and deadline-aware.",
-    guardrails: [
-      "Escalate blockers early.",
-      "Keep summaries action-focused.",
-      "Avoid acting externally without approval.",
+    identityCreature: "Execution Conductor",
+    identityVibe: "Structured, deadline-aware, and escalation-ready.",
+    identityTagline: "I keep priorities aligned and follow-through tight.",
+    identityEmoji: ":clipboard:",
+    soulCoreTruths: [
+      "Clarity of ownership prevents drift.",
+      "Cadence creates momentum.",
+      "Blockers should surface early.",
     ],
-    defaultFirstTask: "Create a short weekly operating review with priorities and blockers.",
-    exampleTasks: [
-      "Summarize active work and identify the top blocker.",
-      "Draft a weekly checkpoint with owners and deadlines.",
+    soulBoundaries: [
+      "Do not invent commitments, deadlines, or decisions.",
+      "Do not hide unresolved blockers.",
+      "Avoid overloading plans with low-value detail.",
+    ],
+    soulVibe: [
+      "Calm, organized, and decisive.",
+      "Status in plain language.",
+      "Next actions always explicit.",
+    ],
+    soulContinuity: [
+      "Maintain active priorities, owners, and due dates.",
+      "Track recurring blockers and escalation paths.",
+      "Preserve meeting decisions and follow-up history.",
     ],
     toolsProfile: "minimal",
     allowExecByDefault: false,
@@ -133,17 +184,29 @@ const STARTER_TEMPLATES: Record<AgentStarterKit, StarterTemplate> = {
   blank: {
     label: "Blank Starter",
     role: "General assistant",
-    mission: "Provide practical support with explicit boundaries and clear next actions.",
-    tone: "Be clear, concise, and transparent about uncertainty.",
-    guardrails: [
-      "Ask before taking irreversible actions.",
-      "Prefer concrete next steps over abstract advice.",
-      "State assumptions when context is incomplete.",
+    identityCreature: "General Operator",
+    identityVibe: "Practical, adaptable, and transparent.",
+    identityTagline: "I bring structure to ambiguous tasks.",
+    identityEmoji: ":compass:",
+    soulCoreTruths: [
+      "Useful output beats perfect output.",
+      "Assumptions should be surfaced early.",
+      "Clear next steps reduce back-and-forth.",
     ],
-    defaultFirstTask: "Handle one concrete task end-to-end and summarize results.",
-    exampleTasks: [
-      "Draft a plan for a requested task.",
-      "Summarize recent activity and propose next steps.",
+    soulBoundaries: [
+      "Do not take irreversible actions without confirmation.",
+      "Do not present guesses as facts.",
+      "Avoid unnecessary complexity.",
+    ],
+    soulVibe: [
+      "Direct and low-friction.",
+      "Context-aware without overexplaining.",
+      "Pragmatic sequencing.",
+    ],
+    soulContinuity: [
+      "Retain stable preferences and operating constraints.",
+      "Track unfinished work and open questions.",
+      "Keep response style consistent across sessions.",
     ],
     toolsProfile: "minimal",
     allowExecByDefault: false,
@@ -350,7 +413,6 @@ export const createDefaultGuidedDraft = (): GuidedAgentCreationDraft => {
   const seed: GuidedAgentCreationDraft = {
     starterKit: "engineer",
     controlLevel: "balanced",
-    firstTask: "",
     customInstructions: "",
     userProfile: "",
     toolNotes: "",
@@ -371,12 +433,6 @@ export const compileGuidedAgentCreation = (params: {
 }): GuidedAgentCreationCompileResult => {
   const name = params.name.trim();
   const starter = resolveStarterTemplate(params.draft.starterKit);
-  const firstTask = firstNonEmpty(params.draft.firstTask, starter.defaultFirstTask);
-  const customInstructions = params.draft.customInstructions.trim();
-  const userProfile = params.draft.userProfile.trim();
-  const toolNotes = params.draft.toolNotes.trim();
-  const memoryNotes = params.draft.memoryNotes.trim();
-  const heartbeatChecklist = normalizeLineList(params.draft.heartbeatChecklist);
 
   const toolsAllow = normalizeLineList(params.draft.controls.toolsAllow);
   const toolsDeny = normalizeLineList(params.draft.controls.toolsDeny);
@@ -403,6 +459,10 @@ export const compileGuidedAgentCreation = (params: {
   const normalizedDeny = Array.from(ensureToolDeny).filter(
     (entry) => !ensureToolAlsoAllow.has(entry)
   );
+  const normalizedSandboxMode =
+    params.draft.controls.allowExec && params.draft.controls.sandboxMode === "off"
+      ? "non-main"
+      : params.draft.controls.sandboxMode;
 
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -421,74 +481,31 @@ export const compileGuidedAgentCreation = (params: {
     errors.push("Auto exec requires runtime tools to be enabled.");
   }
 
-  if (!params.draft.firstTask.trim()) {
-    warnings.push("First task is empty; using starter template default.");
-  }
-  if (!userProfile) {
-    warnings.push("User profile is empty; USER.md will use a minimal default.");
-  }
-  const uncertaintyRule =
-    params.draft.controls.execAutonomy === "auto"
-      ? "When uncertain, take the best bounded action and explain your assumptions."
-      : "When uncertain, ask for confirmation before taking action.";
-  const fileEditRule =
-    params.draft.controls.fileEditAutonomy === "auto-edit"
-      ? "You may apply file edits directly within the configured workspace bounds."
-      : "Propose file edits first and wait for explicit confirmation before applying.";
-
   const files: Partial<Record<AgentFileName, string>> = {
-    "AGENTS.md": [
-      "# Mission",
-      starter.mission,
-      "",
-      "## First Task",
-      firstTask,
-      "",
-      "## Example Tasks",
-      renderList(starter.exampleTasks, "-"),
-      "",
-      "## Guardrails",
-      renderList(starter.guardrails, "-"),
-      customInstructions ? `\n## Custom Instructions\n${customInstructions}` : "",
-      "",
-      "## Operating Rules",
-      `- ${uncertaintyRule}`,
-      `- ${fileEditRule}`,
-    ]
-      .filter((line) => line !== "")
-      .join("\n"),
     "SOUL.md": [
-      "# Voice",
-      starter.tone,
+      "# SOUL.md - Who You Are",
       "",
-      "# Boundaries",
-      renderList(starter.guardrails, "-"),
+      "## Core Truths",
+      renderList(starter.soulCoreTruths, "-"),
+      "",
+      "## Boundaries",
+      renderList(starter.soulBoundaries, "-"),
+      "",
+      "## Vibe",
+      renderList(starter.soulVibe, "-"),
+      "",
+      "## Continuity",
+      renderList(starter.soulContinuity, "-"),
     ].join("\n"),
     "IDENTITY.md": [
-      "# Identity",
+      "# IDENTITY.md - Who Am I?",
       `- Name: ${firstNonEmpty(name, "New Agent")}`,
       `- Role: ${starter.role}`,
+      `- Creature: ${starter.identityCreature}`,
+      `- Vibe: ${starter.identityVibe}`,
+      `- Emoji: ${starter.identityEmoji}`,
+      `- Identity: ${starter.identityTagline}`,
       `- Starter kit: ${starter.label}`,
-    ].join("\n"),
-    "USER.md": [
-      "# User",
-      firstNonEmpty(
-        userProfile,
-        "The user values clear tradeoffs, practical progress, and direct communication."
-      ),
-    ].join("\n"),
-    "TOOLS.md": [
-      "# Tool Notes",
-      firstNonEmpty(toolNotes, "No custom tool notes yet."),
-      "",
-      "These notes are guidance only and do not grant tool permissions.",
-    ].join("\n"),
-    "HEARTBEAT.md": params.draft.heartbeatEnabled
-      ? ["# Heartbeat Checklist", renderList(heartbeatChecklist, "-")].join("\n\n")
-      : "# Heartbeat\nHeartbeats are disabled for this agent by default.",
-    "MEMORY.md": [
-      "# Memory Seeds",
-      firstNonEmpty(memoryNotes, "No durable memory seeds have been provided yet."),
     ].join("\n"),
   };
 
@@ -501,9 +518,9 @@ export const compileGuidedAgentCreation = (params: {
     group: "group:fs",
   });
   const sandboxSummary =
-    params.draft.controls.sandboxMode === "all"
+    normalizedSandboxMode === "all"
       ? "All sessions run in an isolated sandbox."
-      : params.draft.controls.sandboxMode === "non-main"
+      : normalizedSandboxMode === "non-main"
         ? "Group sessions run in an isolated sandbox; your main chat runs normally."
         : "Sessions run without sandbox isolation.";
   const fileSummary = !fileToolsEnabled
@@ -519,6 +536,7 @@ export const compileGuidedAgentCreation = (params: {
 
   const summary = [
     `Starter: ${starter.label}`,
+    "Persona files: custom IDENTITY.md + SOUL.md; AGENTS.md remains the gateway default.",
     webAccessEnabled ? "Web access is enabled for search and fetch tools." : "Web access is disabled.",
     fileSummary,
     commandSummary,
@@ -529,7 +547,7 @@ export const compileGuidedAgentCreation = (params: {
     files,
     agentOverrides: {
       sandbox: {
-        mode: params.draft.controls.sandboxMode,
+        mode: normalizedSandboxMode,
         workspaceAccess: params.draft.controls.workspaceAccess,
       },
       tools: {
