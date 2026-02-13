@@ -7,7 +7,7 @@ import {
 import { shouldTreatExecApprovalResolveErrorAsUnknownId } from "@/features/agents/approvals/execApprovalLifecycleWorkflow";
 
 type GatewayClientLike = {
-  call: <T = unknown>(method: string, params: unknown) => Promise<T>;
+  call: (method: string, params: unknown) => Promise<unknown>;
 };
 
 type SetState<T> = (next: T | ((current: T) => T)) => void;
@@ -145,4 +145,3 @@ export const resolveExecApprovalViaStudio = async (params: {
     setLocalApprovalState(false, message);
   }
 };
-

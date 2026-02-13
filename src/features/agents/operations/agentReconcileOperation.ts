@@ -6,7 +6,7 @@ import {
 } from "@/features/agents/operations/fleetLifecycleWorkflow";
 
 type GatewayClientLike = {
-  call: <T = unknown>(method: string, params: unknown) => Promise<T>;
+  call: (method: string, params: unknown) => Promise<unknown>;
 };
 
 export type ReconcileCommand =
@@ -81,10 +81,10 @@ export const runAgentReconcileOperation = async (params: {
     if (!params.claimRunId(runId)) continue;
 
     try {
-      const result = await params.client.call<{ status?: unknown }>("agent.wait", {
+      const result = (await params.client.call("agent.wait", {
         runId,
         timeoutMs: 1,
-      });
+      })) as { status?: unknown };
       const outcome = resolveReconcileWaitOutcome(result?.status);
       if (!outcome) {
         continue;
@@ -124,4 +124,3 @@ export const runAgentReconcileOperation = async (params: {
 
   return commands;
 };
-
