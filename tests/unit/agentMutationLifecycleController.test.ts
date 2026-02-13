@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildMutationSideEffectCommands,
   buildMutatingMutationBlock,
   buildQueuedMutationBlock,
   resolveMutationPostRunIntent,
@@ -92,6 +93,21 @@ describe("agentMutationLifecycleController", () => {
         sawDisconnect: false,
       },
     });
+  });
+
+  it("builds typed side-effect commands for completed and awaiting-restart dispositions", () => {
+    expect(buildMutationSideEffectCommands({ disposition: "completed" })).toEqual([
+      { kind: "reload-agents" },
+      { kind: "clear-mutation-block" },
+      { kind: "set-mobile-pane", pane: "chat" },
+    ]);
+
+    expect(buildMutationSideEffectCommands({ disposition: "awaiting-restart" })).toEqual([
+      {
+        kind: "patch-mutation-block",
+        patch: { phase: "awaiting-restart", sawDisconnect: false },
+      },
+    ]);
   });
 
   it("selects pending setup auto-retry target only when all gates pass", () => {

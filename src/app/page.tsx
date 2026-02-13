@@ -157,8 +157,8 @@ import {
   resolveHistoryResponseDisposition,
 } from "@/features/agents/operations/historyLifecycleWorkflow";
 import {
+  buildMutationSideEffectCommands,
   buildQueuedMutationBlock,
-  resolveMutationPostRunIntent,
   resolveMutationStartGuard,
   resolvePendingSetupAutoRetryIntent,
 } from "@/features/agents/operations/agentMutationLifecycleController";
@@ -1513,22 +1513,30 @@ const AgentStudioPage = () => {
                   }),
               }
             );
-            const postRunIntent = resolveMutationPostRunIntent({
+            const commands = buildMutationSideEffectCommands({
               disposition: result.disposition,
             });
-            if (postRunIntent.kind === "clear") {
-              await loadAgents();
-              setDeleteAgentBlock(null);
-              setMobilePane("chat");
-              return;
+            for (const command of commands) {
+              if (command.kind === "reload-agents") {
+                await loadAgents();
+                continue;
+              }
+              if (command.kind === "clear-mutation-block") {
+                setDeleteAgentBlock(null);
+                continue;
+              }
+              if (command.kind === "set-mobile-pane") {
+                setMobilePane(command.pane);
+                continue;
+              }
+              setDeleteAgentBlock((current) => {
+                if (!current || current.agentId !== agentId) return current;
+                return {
+                  ...current,
+                  ...command.patch,
+                };
+              });
             }
-            setDeleteAgentBlock((current) => {
-              if (!current || current.agentId !== agentId) return current;
-              return {
-                ...current,
-                ...postRunIntent.patch,
-              };
-            });
           },
         });
       } catch (err) {
@@ -2346,22 +2354,30 @@ const AgentStudioPage = () => {
                   }),
               }
             );
-            const postRunIntent = resolveMutationPostRunIntent({
+            const commands = buildMutationSideEffectCommands({
               disposition: result.disposition,
             });
-            if (postRunIntent.kind === "clear") {
-              await loadAgents();
-              setRenameAgentBlock(null);
-              setMobilePane("chat");
-              return;
+            for (const command of commands) {
+              if (command.kind === "reload-agents") {
+                await loadAgents();
+                continue;
+              }
+              if (command.kind === "clear-mutation-block") {
+                setRenameAgentBlock(null);
+                continue;
+              }
+              if (command.kind === "set-mobile-pane") {
+                setMobilePane(command.pane);
+                continue;
+              }
+              setRenameAgentBlock((current) => {
+                if (!current || current.agentId !== agentId) return current;
+                return {
+                  ...current,
+                  ...command.patch,
+                };
+              });
             }
-            setRenameAgentBlock((current) => {
-              if (!current || current.agentId !== agentId) return current;
-              return {
-                ...current,
-                ...postRunIntent.patch,
-              };
-            });
           },
         });
         return true;

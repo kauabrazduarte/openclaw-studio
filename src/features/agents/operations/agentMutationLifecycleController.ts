@@ -85,6 +85,28 @@ export const resolveMutationPostRunIntent = (params: {
   return { kind: "clear" };
 };
 
+export type MutationSideEffectCommand =
+  | { kind: "reload-agents" }
+  | { kind: "clear-mutation-block" }
+  | { kind: "set-mobile-pane"; pane: "chat" }
+  | { kind: "patch-mutation-block"; patch: { phase: "awaiting-restart"; sawDisconnect: boolean } };
+
+export const buildMutationSideEffectCommands = (params: {
+  disposition: "completed" | "awaiting-restart";
+}): MutationSideEffectCommand[] => {
+  const postRunIntent = resolveMutationPostRunIntent({
+    disposition: params.disposition,
+  });
+  if (postRunIntent.kind === "clear") {
+    return [
+      { kind: "reload-agents" },
+      { kind: "clear-mutation-block" },
+      { kind: "set-mobile-pane", pane: "chat" },
+    ];
+  }
+  return [{ kind: "patch-mutation-block", patch: postRunIntent.patch }];
+};
+
 export type PendingSetupAutoRetryIntent =
   | {
       kind: "skip";

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  buildMutationSideEffectCommands,
   buildQueuedMutationBlock,
-  resolveMutationPostRunIntent,
   resolveMutationStartGuard,
   resolvePendingSetupAutoRetryIntent,
 } from "@/features/agents/operations/agentMutationLifecycleController";
@@ -10,7 +10,10 @@ import {
   resolveGuidedCreateCompletion,
   runGuidedCreateWorkflow,
 } from "@/features/agents/operations/guidedCreateWorkflow";
-import { runConfigMutationWorkflow } from "@/features/agents/operations/configMutationWorkflow";
+import {
+  resolveConfigMutationStatusLine,
+  runConfigMutationWorkflow,
+} from "@/features/agents/operations/configMutationWorkflow";
 import type { AgentGuidedSetup } from "@/features/agents/operations/createAgentOperation";
 
 const createSetup = (): AgentGuidedSetup => ({
@@ -123,9 +126,11 @@ describe("agentMutationLifecycleController integration", () => {
         shouldAwaitRemoteRestart: async () => false,
       }
     );
-    expect(resolveMutationPostRunIntent({ disposition: renameCompleted.disposition })).toEqual({
-      kind: "clear",
-    });
+    expect(buildMutationSideEffectCommands({ disposition: renameCompleted.disposition })).toEqual([
+      { kind: "reload-agents" },
+      { kind: "clear-mutation-block" },
+      { kind: "set-mobile-pane", pane: "chat" },
+    ]);
 
     const deleteAwaitingRestart = await runConfigMutationWorkflow(
       {
@@ -137,14 +142,8 @@ describe("agentMutationLifecycleController integration", () => {
         shouldAwaitRemoteRestart: async () => true,
       }
     );
-    expect(resolveMutationPostRunIntent({ disposition: deleteAwaitingRestart.disposition })).toEqual(
-      {
-        kind: "awaiting-restart",
-        patch: {
-          phase: "awaiting-restart",
-          sawDisconnect: false,
-        },
-      }
+    expect(buildMutationSideEffectCommands({ disposition: deleteAwaitingRestart.disposition })).toEqual(
+      [{ kind: "patch-mutation-block", patch: { phase: "awaiting-restart", sawDisconnect: false } }]
     );
     expect(executeMutation).toHaveBeenCalledTimes(2);
   });
@@ -199,5 +198,85 @@ describe("agentMutationLifecycleController integration", () => {
       reason: "no-eligible-agent",
     });
     expect(applyPendingCreateSetupForAgentId).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses typed mutation commands for lifecycle side effects instead of inline branching", async () => {
+    const commandLog: string[] = [];
+    const runCommands = async (
+      disposition: "completed" | "awaiting-restart"
+    ): Promise<{ phase: string; sawDisconnect: boolean } | null> => {
+      let block: { phase: string; sawDisconnect: boolean } | null = {
+        phase: "mutating",
+        sawDisconnect: false,
+      };
+      for (const command of buildMutationSideEffectCommands({ disposition })) {
+        if (command.kind === "reload-agents") {
+          commandLog.push("reload");
+          continue;
+        }
+        if (command.kind === "clear-mutation-block") {
+          commandLog.push("clear");
+          block = null;
+          continue;
+        }
+        if (command.kind === "set-mobile-pane") {
+          commandLog.push(`pane:${command.pane}`);
+          continue;
+        }
+        commandLog.push(`patch:${command.patch.phase}`);
+        block = {
+          phase: command.patch.phase,
+          sawDisconnect: command.patch.sawDisconnect,
+        };
+      }
+      return block;
+    };
+
+    const completedBlock = await runCommands("completed");
+    const awaitingBlock = await runCommands("awaiting-restart");
+
+    expect(completedBlock).toBeNull();
+    expect(awaitingBlock).toEqual({
+      phase: "awaiting-restart",
+      sawDisconnect: false,
+    });
+    expect(commandLog).toEqual(["reload", "clear", "pane:chat", "patch:awaiting-restart"]);
+  });
+
+  it("preserves lock-status text behavior across queued, mutating, and awaiting-restart phases", () => {
+    expect(
+      resolveConfigMutationStatusLine({
+        block: { phase: "queued", sawDisconnect: false },
+        status: "connected",
+      })
+    ).toBe("Waiting for active runs to finish");
+
+    expect(
+      resolveConfigMutationStatusLine({
+        block: { phase: "mutating", sawDisconnect: false },
+        status: "connected",
+      })
+    ).toBe("Submitting config change");
+
+    expect(
+      resolveConfigMutationStatusLine({
+        block: { phase: "awaiting-restart", sawDisconnect: false },
+        status: "connected",
+      })
+    ).toBe("Waiting for gateway to restart");
+
+    expect(
+      resolveConfigMutationStatusLine({
+        block: { phase: "awaiting-restart", sawDisconnect: true },
+        status: "disconnected",
+      })
+    ).toBe("Gateway restart in progress");
+
+    expect(
+      resolveConfigMutationStatusLine({
+        block: { phase: "awaiting-restart", sawDisconnect: true },
+        status: "connected",
+      })
+    ).toBe("Gateway is back online, syncing agents");
   });
 });
