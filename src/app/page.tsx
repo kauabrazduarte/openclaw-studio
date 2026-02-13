@@ -154,6 +154,11 @@ import {
   resolveReconcileWaitOutcome,
   resolveSummarySnapshotIntent,
 } from "@/features/agents/operations/fleetLifecycleWorkflow";
+import {
+  buildHistoryMetadataPatch,
+  resolveHistoryRequestIntent,
+  resolveHistoryResponseDisposition,
+} from "@/features/agents/operations/historyLifecycleWorkflow";
 
 type ChatHistoryMessage = Record<string, unknown>;
 
@@ -1191,63 +1196,75 @@ const AgentStudioPage = () => {
   const loadAgentHistory = useCallback(
     async (agentId: string, options?: { limit?: number }) => {
       const agent = stateRef.current.agents.find((entry) => entry.agentId === agentId);
-      const sessionKey = agent?.sessionKey?.trim();
-      if (!agent || !agent.sessionCreated || !sessionKey) return;
-      if (historyInFlightRef.current.has(sessionKey)) return;
       const historyRequestId = randomUUID();
-      const requestRevision = agent.transcriptRevision ?? agent.outputLines.length;
-      const requestEpoch = agent.sessionEpoch ?? 0;
-
-      const requestedLimit = options?.limit;
-      const resolvedLimit =
-        typeof requestedLimit === "number" && Number.isFinite(requestedLimit) && requestedLimit > 0
-          ? Math.min(MAX_CHAT_HISTORY_LIMIT, Math.floor(requestedLimit))
-          : DEFAULT_CHAT_HISTORY_LIMIT;
-      historyInFlightRef.current.add(sessionKey);
       const loadedAt = Date.now();
+      const requestIntent = resolveHistoryRequestIntent({
+        agent: agent ?? null,
+        requestedLimit: options?.limit,
+        maxLimit: MAX_CHAT_HISTORY_LIMIT,
+        defaultLimit: DEFAULT_CHAT_HISTORY_LIMIT,
+        inFlightSessionKeys: historyInFlightRef.current,
+        requestId: historyRequestId,
+        loadedAt,
+      });
+      if (requestIntent.kind === "skip") return;
+
+      historyInFlightRef.current.add(requestIntent.sessionKey);
       dispatch({
         type: "updateAgent",
         agentId,
         patch: {
-          lastHistoryRequestRevision: requestRevision,
+          lastHistoryRequestRevision: requestIntent.requestRevision,
         },
       });
       try {
         const result = await client.call<ChatHistoryResult>("chat.history", {
-          sessionKey,
-          limit: resolvedLimit,
+          sessionKey: requestIntent.sessionKey,
+          limit: requestIntent.limit,
         });
         const latest = stateRef.current.agents.find((entry) => entry.agentId === agentId);
-        if (!latest || latest.sessionKey.trim() !== sessionKey) {
-          logTranscriptDebugMetric("history_response_dropped_stale", {
-            reason: "session_key_changed",
-            agentId,
-            requestId: historyRequestId,
-          });
-          return;
-        }
-        if ((latest.sessionEpoch ?? 0) !== requestEpoch) {
-          logTranscriptDebugMetric("history_response_dropped_stale", {
-            reason: "session_epoch_changed",
-            agentId,
-            requestId: historyRequestId,
-          });
-          return;
-        }
+        const responseDisposition = resolveHistoryResponseDisposition({
+          latestAgent: latest ?? null,
+          expectedSessionKey: requestIntent.sessionKey,
+          requestEpoch: requestIntent.requestEpoch,
+          requestRevision: requestIntent.requestRevision,
+        });
         const historyMessages = result.messages ?? [];
-        const metadataPatch: Partial<AgentState> = {
-          historyLoadedAt: loadedAt,
-          historyFetchLimit: resolvedLimit,
-          historyFetchedCount: historyMessages.length,
-          historyMaybeTruncated: historyMessages.length >= resolvedLimit,
-          lastAppliedHistoryRequestId: historyRequestId,
-        };
-        const latestRevision = latest.transcriptRevision ?? latest.outputLines.length;
-        if (latest.status === "running" && Boolean(latest.runId?.trim())) {
+        const metadataPatch: Partial<AgentState> = buildHistoryMetadataPatch({
+          loadedAt: requestIntent.loadedAt,
+          fetchedCount: historyMessages.length,
+          limit: requestIntent.limit,
+          requestId: requestIntent.requestId,
+        });
+        if (responseDisposition.kind === "drop") {
+          const reason = responseDisposition.reason.replace(/-/g, "_");
+          const baseMeta = {
+            reason,
+            agentId,
+            requestId: requestIntent.requestId,
+          };
+          if (responseDisposition.reason === "transcript-revision-changed") {
+            const latestRevision = latest?.transcriptRevision ?? latest?.outputLines.length;
+            logTranscriptDebugMetric("history_response_dropped_stale", {
+              ...baseMeta,
+              requestRevision: requestIntent.requestRevision,
+              latestRevision,
+            });
+            dispatch({
+              type: "updateAgent",
+              agentId,
+              patch: metadataPatch,
+            });
+            return;
+          }
+          logTranscriptDebugMetric("history_response_dropped_stale", baseMeta);
+          return;
+        }
+        if (responseDisposition.kind === "metadata-only") {
           logTranscriptDebugMetric("history_apply_skipped_running", {
             agentId,
-            requestId: historyRequestId,
-            runId: latest.runId,
+            requestId: requestIntent.requestId,
+            runId: latest?.runId ?? null,
           });
           dispatch({
             type: "updateAgent",
@@ -1256,19 +1273,7 @@ const AgentStudioPage = () => {
           });
           return;
         }
-        if (latestRevision !== requestRevision) {
-          logTranscriptDebugMetric("history_response_dropped_stale", {
-            reason: "transcript_revision_changed",
-            agentId,
-            requestId: historyRequestId,
-            requestRevision,
-            latestRevision,
-          });
-          dispatch({
-            type: "updateAgent",
-            agentId,
-            patch: metadataPatch,
-          });
+        if (!latest) {
           return;
         }
 
@@ -1277,14 +1282,14 @@ const AgentStudioPage = () => {
           const history = buildHistoryLines(historyMessages);
           const rawHistoryEntries = buildTranscriptEntriesFromLines({
             lines: history.lines,
-            sessionKey,
+            sessionKey: requestIntent.sessionKey,
             source: "history",
             startSequence: latest.transcriptSequenceCounter ?? existingEntries.length,
             confirmed: true,
           });
           const historyEntries = rawHistoryEntries.map((entry) => ({
             ...entry,
-            entryId: `history:${sessionKey}:${entry.kind}:${entry.role}:${entry.timestampMs ?? "none"}:${entry.fingerprint}`,
+            entryId: `history:${requestIntent.sessionKey}:${entry.kind}:${entry.role}:${entry.timestampMs ?? "none"}:${entry.fingerprint}`,
           }));
           const merged = mergeTranscriptEntriesWithHistory({
             existingEntries,
@@ -1293,7 +1298,7 @@ const AgentStudioPage = () => {
           if (merged.conflictCount > 0) {
             logTranscriptDebugMetric("transcript_merge_conflicts", {
               agentId,
-              requestId: historyRequestId,
+              requestId: requestIntent.requestId,
               conflictCount: merged.conflictCount,
             });
           }
@@ -1325,7 +1330,7 @@ const AgentStudioPage = () => {
         const patch = buildHistorySyncPatch({
           messages: historyMessages,
           currentLines: latest.outputLines,
-          loadedAt,
+          loadedAt: requestIntent.loadedAt,
           status: latest.status,
           runId: latest.runId,
         });
@@ -1343,7 +1348,7 @@ const AgentStudioPage = () => {
           console.error(msg);
         }
       } finally {
-        historyInFlightRef.current.delete(sessionKey);
+        historyInFlightRef.current.delete(requestIntent.sessionKey);
       }
     },
     [client, dispatch]
@@ -2228,7 +2233,7 @@ const AgentStudioPage = () => {
       queueLivePatch,
       clearPendingLivePatch,
       loadSummarySnapshot,
-      loadAgentHistory,
+      requestHistoryRefresh: ({ agentId }) => loadAgentHistory(agentId),
       refreshHeartbeatLatestUpdate,
       bumpHeartbeatTick: () => setHeartbeatTick((prev) => prev + 1),
       setTimeout: (fn, delayMs) => window.setTimeout(fn, delayMs),
