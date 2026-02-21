@@ -2415,7 +2415,7 @@ const AgentStudioPage = () => {
                 <div className="ui-segment grid-cols-4">
                   {(
                     [
-                      { id: "personality", label: "Personality" },
+                      { id: "personality", label: "Behavior" },
                       { id: "capabilities", label: "Capabilities" },
                       { id: "automations", label: "Automations" },
                       { id: "advanced", label: "Advanced" },
@@ -2450,10 +2450,6 @@ const AgentStudioPage = () => {
                     client={client}
                     agents={agents}
                     selectedAgentId={inspectSidebarAgent.agentId}
-                    onClose={() => {
-                      setInspectSidebar(null);
-                      setMobilePane("chat");
-                    }}
                   />
                 ) : (
                   <AgentSettingsPanel

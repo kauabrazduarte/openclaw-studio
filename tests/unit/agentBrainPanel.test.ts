@@ -107,19 +107,18 @@ describe("AgentBrainPanel", () => {
         client,
         agents,
         selectedAgentId: "agent-1",
-        onClose: vi.fn(),
       })
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Instructions" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Directives" })).toBeInTheDocument();
     });
 
-    expect(screen.getByRole("button", { name: "Personality" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "About You" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Persona" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Context" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Tools" })).not.toBeInTheDocument();
     expect(screen.getByText("Be useful.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Instructions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Directives" }));
     await waitFor(() => {
       expect(screen.getByText("alpha agents")).toBeInTheDocument();
     });
@@ -138,7 +137,6 @@ describe("AgentBrainPanel", () => {
         client,
         agents,
         selectedAgentId: "",
-        onClose: vi.fn(),
       })
     );
 
@@ -147,17 +145,15 @@ describe("AgentBrainPanel", () => {
     });
   });
 
-  it("saves_dirty_changes_before_close", async () => {
+  it("saves_dirty_changes_before_tab_switch", async () => {
     const { client, calls } = createMockClient();
     const agents = [createAgent("agent-1", "Alpha", "session-1")];
-    const onClose = vi.fn();
 
     render(
       createElement(AgentBrainPanel, {
         client,
         agents,
         selectedAgentId: "agent-1",
-        onClose,
       })
     );
 
@@ -180,26 +176,22 @@ describe("AgentBrainPanel", () => {
           "# IDENTITY.md - Who Am I?\n\n- Name: Alpha Prime\n- Creature: droid\n- Vibe: calm\n- Emoji: 🤖\n",
       },
     });
-    fireEvent.click(screen.getByTestId("agent-personality-close"));
+    fireEvent.click(screen.getByRole("button", { name: "Directives" }));
 
     await waitFor(() => {
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    const identityWrite = calls.find(
-      (entry) =>
-        entry.method === "agents.files.set" &&
-        Boolean(
-          entry.params &&
-            typeof entry.params === "object" &&
-            (entry.params as Record<string, unknown>).name === "IDENTITY.md"
+      expect(
+        calls.some(
+          (entry) =>
+            entry.method === "agents.files.set" &&
+            Boolean(
+              entry.params &&
+                typeof entry.params === "object" &&
+                (entry.params as Record<string, unknown>).name === "IDENTITY.md"
+            )
         )
-    );
-
-    expect(identityWrite).toBeTruthy();
-    expect(
-      String((identityWrite?.params as Record<string, unknown>).content ?? "")
-    ).toContain("- Name: Alpha Prime");
+      ).toBe(true);
+    });
+    expect(screen.getByText("alpha agents")).toBeInTheDocument();
   });
 
   it("does_not_render_name_editor_in_personality_panel", async () => {
@@ -211,12 +203,11 @@ describe("AgentBrainPanel", () => {
         client,
         agents,
         selectedAgentId: "agent-1",
-        onClose: vi.fn(),
       })
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Personality" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Persona" })).toBeInTheDocument();
     });
     expect(screen.queryByLabelText("Agent name")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Update Name" })).not.toBeInTheDocument();

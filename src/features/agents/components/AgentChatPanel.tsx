@@ -29,10 +29,6 @@ import {
   type AssistantTraceEvent,
   type AgentChatItem,
 } from "./chatItems";
-import {
-  resolveAgentStatusBadgeClass,
-  resolveAgentStatusLabel,
-} from "./colorSemantics";
 import { EmptyStatePanel } from "./EmptyStatePanel";
 
 const formatChatTimestamp = (timestampMs: number): string => {
@@ -852,6 +848,7 @@ export const AgentChatPanel = ({
   const [renameError, setRenameError] = useState<string | null>(null);
   const draftRef = useRef<HTMLTextAreaElement | null>(null);
   const renameInputRef = useRef<HTMLInputElement | null>(null);
+  const renameEditorRef = useRef<HTMLDivElement | null>(null);
   const scrollToBottomNextOutputRef = useRef(false);
   const plainDraftRef = useRef(agent.draft);
   const draftIdentityRef = useRef<{ agentId: string; sessionKey: string }>({
@@ -940,9 +937,6 @@ export const AgentChatPanel = ({
     [agent.status, canSend, onDraftChange, onSend]
   );
 
-  const statusClassName = resolveAgentStatusBadgeClass(agent.status);
-  const statusLabel = resolveAgentStatusLabel(agent.status);
-
   const chatItems = useMemo(
     () =>
       buildFinalAgentChatItems({
@@ -1030,6 +1024,20 @@ export const AgentChatPanel = ({
     setRenameError(null);
   }, [agent.name, renameSaving]);
 
+  useEffect(() => {
+    if (!renameEditing) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (renameEditorRef.current?.contains(target)) return;
+      cancelRename();
+    };
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+    };
+  }, [cancelRename, renameEditing]);
+
   const submitRename = useCallback(async () => {
     if (!onRename || renameSaving) return;
     const nextName = renameDraft.trim();
@@ -1100,7 +1108,7 @@ export const AgentChatPanel = ({
                 isSelected={isSelected}
               />
               <button
-                className="nodrag ui-btn-icon pointer-events-none absolute bottom-0.5 right-0.5 h-5 w-5 rounded-md opacity-0 group-focus-within/avatar:pointer-events-auto group-focus-within/avatar:opacity-100 group-hover/avatar:pointer-events-auto group-hover/avatar:opacity-100"
+                className="nodrag ui-btn-icon ui-btn-icon-xs agent-avatar-shuffle-btn absolute bottom-0.5 right-0.5"
                 type="button"
                 aria-label="Shuffle avatar"
                 data-testid="agent-avatar-shuffle"
@@ -1110,22 +1118,18 @@ export const AgentChatPanel = ({
                   onAvatarShuffle();
                 }}
               >
-                <Shuffle className="h-3 w-3" />
+                <Shuffle className="h-2.5 w-2.5" />
               </button>
             </div>
 
             <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-                <div
-                  className={`min-w-0 transition-[max-width] duration-200 ease-out ${
-                    renameEditing ? "max-w-[32rem] flex-1" : "max-w-full"
-                  }`}
-                >
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="min-w-0 w-[clamp(11rem,34vw,16rem)]">
                   {renameEditing ? (
-                    <div className="flex items-center gap-1.5">
+                    <div ref={renameEditorRef} className="flex h-8 items-center gap-1.5">
                       <input
                         ref={renameInputRef}
-                        className="ui-input h-8 min-w-0 flex-1 rounded-md px-2 text-[12px] font-semibold text-foreground"
+                        className="ui-input agent-rename-input h-8 min-w-0 flex-1 rounded-md px-2 text-[12px] font-semibold text-foreground"
                         aria-label="Edit agent name"
                         data-testid="agent-rename-input"
                         value={renameDraft}
@@ -1137,7 +1141,7 @@ export const AgentChatPanel = ({
                         onKeyDown={handleRenameInputKeyDown}
                       />
                       <button
-                        className="ui-btn-icon h-8 w-8"
+                        className="ui-btn-icon ui-btn-icon-sm agent-rename-control"
                         type="button"
                         aria-label="Save agent name"
                         data-testid="agent-rename-save"
@@ -1146,54 +1150,38 @@ export const AgentChatPanel = ({
                         }}
                         disabled={renameSaving}
                       >
-                        <Check className="h-4 w-4" />
+                        <Check className="h-3.5 w-3.5" />
                       </button>
                       <button
-                        className="ui-btn-icon h-8 w-8"
+                        className="ui-btn-icon ui-btn-icon-sm agent-rename-control"
                         type="button"
                         aria-label="Cancel agent rename"
                         data-testid="agent-rename-cancel"
                         onClick={cancelRename}
                         disabled={renameSaving}
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   ) : (
-                    <div className="flex min-w-0 items-center gap-1.5">
+                    <div className="flex h-8 min-w-0 items-center gap-1.5">
                       <div className="type-agent-name min-w-0 truncate text-foreground">
                         {agent.name}
                       </div>
                       {onRename ? (
                         <button
-                          className="ui-btn-icon h-6 w-6 shrink-0"
+                          className="ui-btn-icon ui-btn-icon-xs agent-rename-control shrink-0"
                           type="button"
                           aria-label="Rename agent"
                           data-testid="agent-rename-toggle"
                           onClick={beginRename}
                         >
-                          <Pencil className="h-3.5 w-3.5" />
+                          <Pencil className="h-3 w-3" />
                         </button>
                       ) : null}
                     </div>
                   )}
                 </div>
-                <span
-                  aria-hidden
-                  className={`shrink-0 text-[11px] text-muted-foreground/80 transition-opacity duration-150 ${
-                    renameEditing ? "opacity-0" : "opacity-100"
-                  }`}
-                >
-                  •
-                </span>
-                <span
-                  className={`ui-badge shrink-0 transition-transform duration-200 ease-out ${statusClassName} ${
-                    renameEditing ? "translate-x-1" : ""
-                  }`}
-                  data-status={agent.status}
-                >
-                  {statusLabel}
-                </span>
               </div>
               {renameError ? (
                 <div className="ui-text-danger mt-1 text-[11px]">{renameError}</div>
@@ -1267,8 +1255,8 @@ export const AgentChatPanel = ({
               className="nodrag ui-btn-icon"
               type="button"
               data-testid="agent-settings-toggle"
-              aria-label="Open personality"
-              title="Personality"
+              aria-label="Open behavior"
+              title="Behavior"
               onClick={onOpenSettings}
             >
               <Cog className="h-4 w-4" />

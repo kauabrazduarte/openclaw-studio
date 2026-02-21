@@ -79,7 +79,7 @@ describe("AgentChatPanel controls", () => {
     expect(screen.getByTestId("agent-new-session-toggle")).toBeInTheDocument();
     expect(screen.getByLabelText("Start new session")).toBeInTheDocument();
     expect(screen.getByTestId("agent-settings-toggle")).toBeInTheDocument();
-    expect(screen.getByLabelText("Open personality")).toBeInTheDocument();
+    expect(screen.getByLabelText("Open behavior")).toBeInTheDocument();
     expect(screen.queryByText("Inspect")).not.toBeInTheDocument();
   });
 
@@ -178,7 +178,7 @@ describe("AgentChatPanel controls", () => {
     expect(onNewSession).toHaveBeenCalledTimes(1);
   });
 
-  it("renders semantic status badge markers for idle and running states", () => {
+  it("does_not_render_inline_status_badge_markers", () => {
     const { rerender, container } = render(
       createElement(AgentChatPanel, {
         agent: createAgent(),
@@ -198,8 +198,7 @@ describe("AgentChatPanel controls", () => {
     );
 
     const idleBadge = container.querySelector('[data-status="idle"]');
-    expect(idleBadge).not.toBeNull();
-    expect(idleBadge).toHaveClass("ui-badge-status-idle");
+    expect(idleBadge).toBeNull();
 
     rerender(
       createElement(AgentChatPanel, {
@@ -220,8 +219,7 @@ describe("AgentChatPanel controls", () => {
     );
 
     const runningBadge = container.querySelector('[data-status="running"]');
-    expect(runningBadge).not.toBeNull();
-    expect(runningBadge).toHaveClass("ui-badge-status-running");
+    expect(runningBadge).toBeNull();
   });
 
   it("invokes_on_model_change_when_model_select_changes", () => {
