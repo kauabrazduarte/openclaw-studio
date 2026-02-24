@@ -243,7 +243,7 @@ describe("useSettingsRouteController", () => {
       "select",
       "inspect",
       "pane",
-      "push:/agents/agent%202/settings",
+      "push:/?settingsAgentId=agent%202",
     ]);
   });
 

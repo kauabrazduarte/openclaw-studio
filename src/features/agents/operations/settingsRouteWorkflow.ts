@@ -13,6 +13,8 @@ export type SettingsRouteNavCommand =
   | { kind: "push"; href: string }
   | { kind: "replace"; href: string };
 
+export const SETTINGS_ROUTE_AGENT_ID_QUERY_PARAM = "settingsAgentId";
+
 export const parseSettingsRouteAgentIdFromPathname = (pathname: string): string | null => {
   const match = pathname.match(/^\/agents\/([^/]+)\/settings\/?$/);
   if (!match) return null;
@@ -26,12 +28,23 @@ export const parseSettingsRouteAgentIdFromPathname = (pathname: string): string 
   }
 };
 
+export const parseSettingsRouteAgentIdFromQueryParam = (value: string | null | undefined): string | null => {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) return null;
+  try {
+    const decoded = decodeURIComponent(trimmed).trim();
+    return decoded ? decoded : null;
+  } catch {
+    return trimmed;
+  }
+};
+
 export const buildSettingsRouteHref = (agentId: string): string => {
   const resolved = agentId.trim();
   if (!resolved) {
     throw new Error("Cannot build settings route href: agent id is empty.");
   }
-  return `/agents/${encodeURIComponent(resolved)}/settings`;
+  return `/?${SETTINGS_ROUTE_AGENT_ID_QUERY_PARAM}=${encodeURIComponent(resolved)}`;
 };
 
 export const shouldConfirmDiscardPersonalityChanges = (params: {

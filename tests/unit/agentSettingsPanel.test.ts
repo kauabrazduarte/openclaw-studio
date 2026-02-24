@@ -102,7 +102,7 @@ describe("AgentSettingsPanel", () => {
     expect(screen.getByTestId("agent-settings-close")).toBeInTheDocument();
   });
 
-  it("keeps_show_tool_calls_and_show_thinking_toggles", () => {
+  it("does_not_render_show_tool_calls_and_show_thinking_toggles_in_advanced_mode", () => {
     render(
       createElement(AgentSettingsPanel, {
         agent: createAgent(),
@@ -121,12 +121,8 @@ describe("AgentSettingsPanel", () => {
       })
     );
 
-    const toolCallsSwitch = screen.getByRole("switch", { name: "Show tool calls" });
-    const thinkingSwitch = screen.getByRole("switch", { name: "Show thinking" });
-    expect(toolCallsSwitch).toBeInTheDocument();
-    expect(thinkingSwitch).toBeInTheDocument();
-    expect(toolCallsSwitch).toHaveAttribute("aria-checked", "true");
-    expect(thinkingSwitch).toHaveAttribute("aria-checked", "true");
+    expect(screen.queryByRole("switch", { name: "Show tool calls" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "Show thinking" })).not.toBeInTheDocument();
   });
 
   it("renders_permissions_controls", () => {

@@ -28,7 +28,6 @@ import {
 } from "@/lib/cron/types";
 import type { GatewayClient, GatewayStatus } from "@/lib/gateway/GatewayClient";
 import { isGatewayDisconnectLikeError } from "@/lib/gateway/GatewayClient";
-import { shouldAwaitDisconnectRestartForRemoteMutation } from "@/lib/gateway/gatewayReloadMode";
 import type { GatewayModelPolicySnapshot } from "@/lib/gateway/models";
 import { renameGatewayAgent } from "@/lib/gateway/agentConfig";
 import { fetchJson } from "@/lib/http";
@@ -70,6 +69,7 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
   const [cronDeleteBusyJobId, setCronDeleteBusyJobId] = useState<string | null>(null);
   const [restartingMutationBlock, setRestartingMutationBlock] =
     useState<RestartingMutationBlockState | null>(null);
+  const REMOTE_MUTATION_EXEC_TIMEOUT_MS = 45_000;
 
   const hasRenameMutationBlock = restartingMutationBlock?.kind === "rename-agent";
   const hasDeleteMutationBlock = restartingMutationBlock?.kind === "delete-agent";
@@ -206,13 +206,27 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
               return null;
             });
           },
-          executeMutation: input.executeMutation,
-          shouldAwaitRemoteRestart: async () =>
-            shouldAwaitDisconnectRestartForRemoteMutation({
-              client: params.client,
-              cachedConfigSnapshot: params.gatewayConfigSnapshot,
-              logError: (message, error) => console.error(message, error),
-            }),
+          executeMutation: async () => {
+            const timeoutLabel =
+              input.kind === "delete-agent"
+                ? "Delete agent request timed out."
+                : "Rename agent request timed out.";
+            await Promise.race([
+              input.executeMutation(),
+              new Promise<never>((_, reject) => {
+                window.setTimeout(
+                  () =>
+                    reject(
+                      new Error(
+                        `${timeoutLabel} The gateway did not respond in time.`
+                      )
+                    ),
+                  REMOTE_MUTATION_EXEC_TIMEOUT_MS
+                );
+              }),
+            ]);
+          },
+          shouldAwaitRemoteRestart: async () => false,
           reloadAgents: params.loadAgents,
           setMobilePaneChat: params.setMobilePaneChat,
           onError: params.setError,
@@ -220,9 +234,7 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
       });
     },
     [
-      params.client,
       params.enqueueConfigMutation,
-      params.gatewayConfigSnapshot,
       params.isLocalGateway,
       params.loadAgents,
       params.setError,
@@ -250,6 +262,50 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
       params.setMobilePaneChat();
     },
   });
+
+  useEffect(() => {
+    if (!restartingMutationBlock) return;
+    if (restartingMutationBlock.kind !== "delete-agent") return;
+    if (restartingMutationBlock.phase !== "awaiting-restart") return;
+    if (params.status !== "connected") return;
+
+    const deletedAgentStillPresent = params.agents.some(
+      (entry) => entry.agentId === restartingMutationBlock.agentId
+    );
+    if (!deletedAgentStillPresent) {
+      setRestartingMutationBlock(null);
+      params.setMobilePaneChat();
+      return;
+    }
+
+    let cancelled = false;
+    const refreshAgents = async () => {
+      try {
+        await params.loadAgents();
+      } catch (error) {
+        if (!isGatewayDisconnectLikeError(error)) {
+          console.error("Failed to refresh agents while awaiting delete restart.", error);
+        }
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      if (cancelled) return;
+      void refreshAgents();
+    }, 2500);
+    void refreshAgents();
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [
+    params.agents,
+    params.loadAgents,
+    params.setMobilePaneChat,
+    params.status,
+    restartingMutationBlock,
+  ]);
 
   const handleDeleteAgent = useCallback(
     async (agentId: string) => {

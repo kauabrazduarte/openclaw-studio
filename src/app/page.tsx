@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AgentChatPanel } from "@/features/agents/components/AgentChatPanel";
 import { AgentCreateModal } from "@/features/agents/components/AgentCreateModal";
 import {
@@ -105,6 +105,8 @@ import { useAgentSettingsMutationController } from "@/features/agents/operations
 import { useRuntimeSyncController } from "@/features/agents/operations/useRuntimeSyncController";
 import { useChatInteractionController } from "@/features/agents/operations/useChatInteractionController";
 import {
+  SETTINGS_ROUTE_AGENT_ID_QUERY_PARAM,
+  parseSettingsRouteAgentIdFromQueryParam,
   parseSettingsRouteAgentIdFromPathname,
   type InspectSidebarState,
   type SettingsRouteTab,
@@ -118,6 +120,7 @@ const CREATE_AGENT_DEFAULT_PERMISSIONS: AgentPermissionsDraft = {
 };
 
 type MobilePane = "fleet" | "chat";
+type SettingsSidebarItem = "personality" | "capabilities" | "automations" | "advanced";
 
 const RESERVED_MAIN_AGENT_ID = "main";
 
@@ -203,9 +206,13 @@ const resolveNextNewAgentName = (agents: AgentState[]) => {
 const AgentStudioPage = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const settingsRouteAgentId = useMemo(
-    () => parseSettingsRouteAgentIdFromPathname(pathname ?? ""),
-    [pathname]
+    () =>
+      parseSettingsRouteAgentIdFromQueryParam(
+        searchParams.get(SETTINGS_ROUTE_AGENT_ID_QUERY_PARAM)
+      ) ?? parseSettingsRouteAgentIdFromPathname(pathname ?? ""),
+    [pathname, searchParams]
   );
   const settingsRouteActive = settingsRouteAgentId !== null;
   const [settingsCoordinator] = useState(() => createStudioSettingsCoordinator());
@@ -242,6 +249,7 @@ const AgentStudioPage = () => {
   const [mobilePane, setMobilePane] = useState<MobilePane>("chat");
   const [inspectSidebar, setInspectSidebar] = useState<InspectSidebarState>(null);
   const [personalityHasUnsavedChanges, setPersonalityHasUnsavedChanges] = useState(false);
+  const [settingsSidebarItem, setSettingsSidebarItem] = useState<SettingsSidebarItem>("personality");
   const [createAgentBlock, setCreateAgentBlock] = useState<CreateAgentBlockState | null>(null);
   const [pendingExecApprovalsByAgentId, setPendingExecApprovalsByAgentId] = useState<
     Record<string, PendingExecApproval[]>
@@ -287,6 +295,9 @@ const AgentStudioPage = () => {
   const inspectSidebarAgentId = inspectSidebar?.agentId ?? null;
   const inspectSidebarTab = inspectSidebar?.tab ?? null;
   const effectiveSettingsTab: SettingsRouteTab = inspectSidebarTab ?? "personality";
+  useEffect(() => {
+    setSettingsSidebarItem(effectiveSettingsTab);
+  }, [effectiveSettingsTab]);
   const inspectSidebarAgent = useMemo(() => {
     if (!inspectSidebarAgentId) return null;
     return agents.find((entry) => entry.agentId === inspectSidebarAgentId) ?? null;
@@ -349,6 +360,11 @@ const AgentStudioPage = () => {
     () => resolveControlUiUrl({ gatewayUrl, configSnapshot: gatewayConfigSnapshot }),
     [gatewayConfigSnapshot, gatewayUrl]
   );
+  const settingsHeaderModel = (inspectSidebarAgent?.model ?? "").trim() || "Default";
+  const settingsHeaderThinkingRaw = (inspectSidebarAgent?.thinkingLevel ?? "").trim() || "low";
+  const settingsHeaderThinking =
+    settingsHeaderThinkingRaw.charAt(0).toUpperCase() + settingsHeaderThinkingRaw.slice(1);
+  const activeSettingsSidebarItem: SettingsSidebarItem = settingsSidebarItem;
 
   useEffect(() => {
     const selector = 'link[data-agent-favicon="true"]';
@@ -1322,23 +1338,20 @@ const AgentStudioPage = () => {
 
         {settingsRouteActive ? (
           <div
-            className="ui-panel ui-depth-workspace flex min-h-0 flex-1 flex-col overflow-hidden"
+            className="ui-panel ui-depth-workspace flex min-h-0 flex-1 overflow-hidden"
             data-testid="agent-settings-route-panel"
           >
-            <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
-              <button
-                type="button"
-                className="ui-btn-secondary px-3 py-1.5 font-mono text-[10px] font-semibold tracking-[0.06em]"
-                onClick={handleBackToChat}
-              >
-                Back to chat
-              </button>
-              <div className="truncate font-mono text-[11px] font-semibold tracking-[0.05em] text-muted-foreground">
-                {inspectSidebarAgent?.name ?? settingsRouteAgentId ?? "Agent settings"}
+            <aside className="w-[240px] shrink-0 border-r border-border/60">
+              <div className="border-b border-border/60 px-4 py-3">
+                <button
+                  type="button"
+                  className="ui-btn-secondary w-full px-3 py-1.5 font-mono text-[10px] font-semibold tracking-[0.06em]"
+                  onClick={handleBackToChat}
+                >
+                  Back to chat
+                </button>
               </div>
-            </div>
-            <div className="border-b border-border/60 px-3 py-3">
-              <div className="ui-segment grid-cols-4">
+              <nav className="py-3">
                 {(
                   [
                     { id: "personality", label: "Behavior" },
@@ -1347,85 +1360,114 @@ const AgentStudioPage = () => {
                     { id: "advanced", label: "Advanced" },
                   ] as const
                 ).map((entry) => {
-                  const active = effectiveSettingsTab === entry.id;
+                  const active = activeSettingsSidebarItem === entry.id;
                   return (
                     <button
                       key={entry.id}
                       type="button"
-                      className="ui-segment-item px-2 py-2 font-mono text-[11px] font-medium tracking-[0.02em]"
-                      data-active={active ? "true" : "false"}
+                      className={`relative w-full px-5 py-3 text-left text-sm transition ${
+                        active
+                          ? "bg-surface-2/55 font-medium text-foreground"
+                          : "font-normal text-muted-foreground hover:bg-surface-2/35 hover:text-foreground"
+                      }`}
                       onClick={() => {
+                        setSettingsSidebarItem(entry.id);
                         handleSettingsRouteTabChange(entry.id);
                       }}
                     >
+                      {active ? (
+                        <span className="absolute inset-y-2 left-0 w-0.5 rounded-r bg-primary" aria-hidden="true" />
+                      ) : null}
                       {entry.label}
                     </button>
                   );
                 })}
+              </nav>
+            </aside>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div className="flex items-start justify-between border-b border-border/60 px-6 py-4">
+                <div>
+                  <div className="text-lg font-semibold text-foreground">
+                    {inspectSidebarAgent?.name ?? settingsRouteAgentId ?? "Agent settings"}
+                  </div>
+                  <div className="mt-1 font-mono text-[11px] text-muted-foreground">
+                    Model: {settingsHeaderModel}{" "}
+                    <span className="mx-2 text-border">|</span>
+                    Thinking: {settingsHeaderThinking}
+                  </div>
+                </div>
+                <div className="rounded-md border border-border/70 bg-surface-1 px-3 py-1 font-mono text-[11px] text-muted-foreground">
+                  [{personalityHasUnsavedChanges ? "Unsaved" : "Saved ✓"}]
+                </div>
               </div>
-            </div>
-            <div className="min-h-0 flex-1">
-              {inspectSidebarAgent ? (
-                effectiveSettingsTab === "personality" ? (
-                  <AgentBrainPanel
-                    client={client}
-                    agents={agents}
-                    selectedAgentId={inspectSidebarAgent.agentId}
-                    onUnsavedChangesChange={setPersonalityHasUnsavedChanges}
-                  />
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {inspectSidebarAgent ? (
+                  effectiveSettingsTab === "personality" ? (
+                    <AgentBrainPanel
+                      client={client}
+                      agents={agents}
+                      selectedAgentId={inspectSidebarAgent.agentId}
+                      onUnsavedChangesChange={setPersonalityHasUnsavedChanges}
+                    />
+                  ) : (
+                    <div className="h-full overflow-y-auto px-6 py-6">
+                      <div className="mx-auto w-full max-w-[920px]">
+                        <AgentSettingsPanel
+                          key={`${inspectSidebarAgent.agentId}:${effectiveSettingsTab}`}
+                          mode={
+                            effectiveSettingsTab === "automations"
+                              ? "automations"
+                              : effectiveSettingsTab === "advanced"
+                                ? "advanced"
+                                : "capabilities"
+                          }
+                          showHeader={false}
+                          agent={inspectSidebarAgent}
+                          onClose={handleBackToChat}
+                          permissionsDraft={settingsAgentPermissionsDraft ?? undefined}
+                          onUpdateAgentPermissions={(draft) =>
+                            settingsMutationController.handleUpdateAgentPermissions(
+                              inspectSidebarAgent.agentId,
+                              draft
+                            )
+                          }
+                          onDelete={() => settingsMutationController.handleDeleteAgent(inspectSidebarAgent.agentId)}
+                          canDelete={inspectSidebarAgent.agentId !== RESERVED_MAIN_AGENT_ID}
+                          onToolCallingToggle={(enabled) =>
+                            handleToolCallingToggle(inspectSidebarAgent.agentId, enabled)
+                          }
+                          onThinkingTracesToggle={(enabled) =>
+                            handleThinkingTracesToggle(inspectSidebarAgent.agentId, enabled)
+                          }
+                          cronJobs={settingsMutationController.settingsCronJobs}
+                          cronLoading={settingsMutationController.settingsCronLoading}
+                          cronError={settingsMutationController.settingsCronError}
+                          cronCreateBusy={settingsMutationController.cronCreateBusy}
+                          cronRunBusyJobId={settingsMutationController.cronRunBusyJobId}
+                          cronDeleteBusyJobId={settingsMutationController.cronDeleteBusyJobId}
+                          onCreateCronJob={(draft) =>
+                            settingsMutationController.handleCreateCronJob(inspectSidebarAgent.agentId, draft)
+                          }
+                          onRunCronJob={(jobId) =>
+                            settingsMutationController.handleRunCronJob(inspectSidebarAgent.agentId, jobId)
+                          }
+                          onDeleteCronJob={(jobId) =>
+                            settingsMutationController.handleDeleteCronJob(inspectSidebarAgent.agentId, jobId)
+                          }
+                          controlUiUrl={controlUiUrl}
+                        />
+                      </div>
+                    </div>
+                  )
                 ) : (
-                  <AgentSettingsPanel
-                    key={`${inspectSidebarAgent.agentId}:${effectiveSettingsTab}`}
-                    mode={
-                      effectiveSettingsTab === "automations"
-                        ? "automations"
-                        : effectiveSettingsTab === "advanced"
-                          ? "advanced"
-                          : "capabilities"
-                    }
-                    agent={inspectSidebarAgent}
-                    onClose={handleBackToChat}
-                    permissionsDraft={settingsAgentPermissionsDraft ?? undefined}
-                    onUpdateAgentPermissions={(draft) =>
-                      settingsMutationController.handleUpdateAgentPermissions(
-                        inspectSidebarAgent.agentId,
-                        draft
-                      )
-                    }
-                    onDelete={() => settingsMutationController.handleDeleteAgent(inspectSidebarAgent.agentId)}
-                    canDelete={inspectSidebarAgent.agentId !== RESERVED_MAIN_AGENT_ID}
-                    onToolCallingToggle={(enabled) =>
-                      handleToolCallingToggle(inspectSidebarAgent.agentId, enabled)
-                    }
-                    onThinkingTracesToggle={(enabled) =>
-                      handleThinkingTracesToggle(inspectSidebarAgent.agentId, enabled)
-                    }
-                    cronJobs={settingsMutationController.settingsCronJobs}
-                    cronLoading={settingsMutationController.settingsCronLoading}
-                    cronError={settingsMutationController.settingsCronError}
-                    cronCreateBusy={settingsMutationController.cronCreateBusy}
-                    cronRunBusyJobId={settingsMutationController.cronRunBusyJobId}
-                    cronDeleteBusyJobId={settingsMutationController.cronDeleteBusyJobId}
-                    onCreateCronJob={(draft) =>
-                      settingsMutationController.handleCreateCronJob(inspectSidebarAgent.agentId, draft)
-                    }
-                    onRunCronJob={(jobId) =>
-                      settingsMutationController.handleRunCronJob(inspectSidebarAgent.agentId, jobId)
-                    }
-                    onDeleteCronJob={(jobId) =>
-                      settingsMutationController.handleDeleteCronJob(inspectSidebarAgent.agentId, jobId)
-                    }
-                    controlUiUrl={controlUiUrl}
+                  <EmptyStatePanel
+                    title="Agent not found."
+                    description="Back to chat and select an available agent."
+                    fillHeight
+                    className="items-center p-6 text-center text-sm"
                   />
-                )
-              ) : (
-                <EmptyStatePanel
-                  title="Agent not found."
-                  description="Back to chat and select an available agent."
-                  fillHeight
-                  className="items-center p-6 text-center text-sm"
-                />
-              )}
+                )}
+              </div>
             </div>
           </div>
         ) : (
@@ -1491,6 +1533,12 @@ const AgentStudioPage = () => {
                       }
                       onThinkingChange={(value) =>
                         handleThinkingChange(focusedAgent.agentId, focusedAgent.sessionKey, value)
+                      }
+                      onToolCallingToggle={(enabled) =>
+                        handleToolCallingToggle(focusedAgent.agentId, enabled)
+                      }
+                      onThinkingTracesToggle={(enabled) =>
+                        handleThinkingTracesToggle(focusedAgent.agentId, enabled)
                       }
                       onDraftChange={(value) => handleDraftChange(focusedAgent.agentId, value)}
                       onSend={(message) =>

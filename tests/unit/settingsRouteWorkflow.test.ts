@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  SETTINGS_ROUTE_AGENT_ID_QUERY_PARAM,
   buildSettingsRouteHref,
+  parseSettingsRouteAgentIdFromQueryParam,
   parseSettingsRouteAgentIdFromPathname,
   planBackToChatCommands,
   planFleetSelectCommands,
@@ -28,7 +30,17 @@ describe("settingsRouteWorkflow", () => {
   });
 
   it("builds encoded settings route href", () => {
-    expect(buildSettingsRouteHref("agent one/2")).toBe("/agents/agent%20one%2F2/settings");
+    expect(buildSettingsRouteHref("agent one/2")).toBe(
+      `/?${SETTINGS_ROUTE_AGENT_ID_QUERY_PARAM}=agent%20one%2F2`
+    );
+  });
+
+  it("parses settings route agent id from query param", () => {
+    expect(parseSettingsRouteAgentIdFromQueryParam("agent-1")).toBe("agent-1");
+    expect(parseSettingsRouteAgentIdFromQueryParam("agent%201")).toBe("agent 1");
+    expect(parseSettingsRouteAgentIdFromQueryParam("%E0%A4%A")).toBe("%E0%A4%A");
+    expect(parseSettingsRouteAgentIdFromQueryParam("  ")).toBeNull();
+    expect(parseSettingsRouteAgentIdFromQueryParam(null)).toBeNull();
   });
 
   it("throws when building settings route href with empty agent id", () => {
@@ -160,7 +172,7 @@ describe("settingsRouteWorkflow", () => {
         value: { agentId: "agent 2", tab: "advanced" },
       },
       { kind: "set-mobile-pane-chat" },
-      { kind: "push", href: "/agents/agent%202/settings" },
+      { kind: "push", href: "/?settingsAgentId=agent%202" },
     ]);
 
     expect(
