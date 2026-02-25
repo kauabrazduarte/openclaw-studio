@@ -1,4 +1,9 @@
-export type SettingsRouteTab = "personality" | "capabilities" | "automations" | "advanced";
+export type SettingsRouteTab =
+  | "personality"
+  | "capabilities"
+  | "skills"
+  | "automations"
+  | "advanced";
 
 export type InspectSidebarState =
   | { agentId: string; tab: SettingsRouteTab }

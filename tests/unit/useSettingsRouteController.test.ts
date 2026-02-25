@@ -333,4 +333,24 @@ describe("useSettingsRouteController", () => {
       tab: "automations",
     });
   });
+
+  it("switches to skills tab without discard prompt when leaving capabilities", () => {
+    const ctx = renderController({
+      settingsRouteActive: true,
+      settingsRouteAgentId: "agent-1",
+      inspectSidebar: { agentId: "agent-1", tab: "capabilities" },
+      activeTab: "capabilities" satisfies SettingsRouteTab,
+      personalityHasUnsavedChanges: true,
+    });
+
+    act(() => {
+      ctx.getValue().handleSettingsRouteTabChange("skills");
+    });
+
+    expect(ctx.confirmDiscard).not.toHaveBeenCalled();
+    expect(ctx.setInspectSidebar).toHaveBeenCalledWith({
+      agentId: "agent-1",
+      tab: "skills",
+    });
+  });
 });

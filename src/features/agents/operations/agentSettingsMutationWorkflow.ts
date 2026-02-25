@@ -5,11 +5,17 @@ import {
 
 export const RESERVED_MAIN_AGENT_ID = "main";
 
-type GuardedActionKind = "delete-agent" | "rename-agent" | "update-agent-permissions";
+type GuardedActionKind =
+  | "delete-agent"
+  | "rename-agent"
+  | "update-agent-permissions"
+  | "use-all-skills"
+  | "disable-all-skills"
+  | "set-skill-enabled";
 type CronActionKind = "run-cron-job" | "delete-cron-job";
 
 export type AgentSettingsMutationRequest =
-  | { kind: GuardedActionKind; agentId: string }
+  | { kind: GuardedActionKind; agentId: string; skillName?: string }
   | { kind: "create-cron-job"; agentId: string }
   | { kind: CronActionKind; agentId: string; jobId: string };
 
@@ -28,7 +34,8 @@ export type AgentSettingsMutationDenyReason =
   | "reserved-main-delete"
   | "cron-action-busy"
   | "missing-agent-id"
-  | "missing-job-id";
+  | "missing-job-id"
+  | "missing-skill-name";
 
 export type AgentSettingsMutationDecision =
   | {
@@ -48,7 +55,12 @@ const normalizeId = (value: string) => value.trim();
 const isGuardedAction = (
   kind: AgentSettingsMutationRequest["kind"]
 ): kind is GuardedActionKind =>
-  kind === "delete-agent" || kind === "rename-agent" || kind === "update-agent-permissions";
+  kind === "delete-agent" ||
+  kind === "rename-agent" ||
+  kind === "update-agent-permissions" ||
+  kind === "use-all-skills" ||
+  kind === "disable-all-skills" ||
+  kind === "set-skill-enabled";
 
 const isCronActionBusy = (context: AgentSettingsMutationContext) =>
   context.cronCreateBusy ||
@@ -116,6 +128,17 @@ export const planAgentSettingsMutation = (
       normalizedAgentId,
       normalizedJobId,
     };
+  }
+
+  if (request.kind === "set-skill-enabled") {
+    const normalizedSkillName = normalizeId(request.skillName ?? "");
+    if (!normalizedSkillName) {
+      return {
+        kind: "deny",
+        reason: "missing-skill-name",
+        message: null,
+      };
+    }
   }
 
   return {

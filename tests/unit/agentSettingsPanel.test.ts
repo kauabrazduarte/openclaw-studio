@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import type { AgentState } from "@/features/agents/state/store";
 import { AgentSettingsPanel } from "@/features/agents/components/AgentInspectPanels";
 import type { CronJobSummary } from "@/lib/cron/types";
+import type { SkillStatusReport } from "@/lib/skills/types";
 
 const createAgent = (): AgentState => ({
   agentId: "agent-1",
@@ -51,6 +52,47 @@ const createCronJob = (id: string): CronJobSummary => ({
   wakeMode: "next-heartbeat",
   payload: { kind: "agentTurn", message: "hi" },
   state: {},
+});
+
+const createSkillsReport = (): SkillStatusReport => ({
+  workspaceDir: "/tmp/workspace",
+  managedSkillsDir: "/tmp/skills",
+  skills: [
+    {
+      name: "github",
+      description: "GitHub integration",
+      source: "shared",
+      bundled: false,
+      filePath: "/tmp/skills/github/SKILL.md",
+      baseDir: "/tmp/skills/github",
+      skillKey: "github",
+      always: false,
+      disabled: false,
+      blockedByAllowlist: false,
+      eligible: true,
+      requirements: { bins: [], env: [], config: [], os: [] },
+      missing: { bins: [], env: [], config: [], os: [] },
+      configChecks: [],
+      install: [],
+    },
+    {
+      name: "browser",
+      description: "Browser automation",
+      source: "bundled",
+      bundled: true,
+      filePath: "/tmp/skills/browser/SKILL.md",
+      baseDir: "/tmp/skills/browser",
+      skillKey: "browser",
+      always: false,
+      disabled: true,
+      blockedByAllowlist: true,
+      eligible: false,
+      requirements: { bins: ["playwright"], env: [], config: [], os: [] },
+      missing: { bins: ["playwright"], env: [], config: [], os: [] },
+      configChecks: [],
+      install: [],
+    },
+  ],
 });
 
 describe("AgentSettingsPanel", () => {
@@ -319,6 +361,168 @@ describe("AgentSettingsPanel", () => {
     );
 
     expect(screen.queryByRole("button", { name: "New session" })).not.toBeInTheDocument();
+  });
+
+  it("renders_skills_mode_and_runs_bulk_actions", () => {
+    const onUseAllSkills = vi.fn();
+    const onDisableAllSkills = vi.fn();
+    render(
+      createElement(AgentSettingsPanel, {
+        agent: createAgent(),
+        mode: "skills",
+        onClose: vi.fn(),
+        onDelete: vi.fn(),
+        onToolCallingToggle: vi.fn(),
+        onThinkingTracesToggle: vi.fn(),
+        cronJobs: [],
+        cronLoading: false,
+        cronError: null,
+        cronRunBusyJobId: null,
+        cronDeleteBusyJobId: null,
+        onRunCronJob: vi.fn(),
+        onDeleteCronJob: vi.fn(),
+        skillsReport: createSkillsReport(),
+        onUseAllSkills,
+        onDisableAllSkills,
+      })
+    );
+
+    expect(screen.getByTestId("agent-settings-skills")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Use all" }));
+    fireEvent.click(screen.getByRole("button", { name: "Disable all" }));
+    expect(onUseAllSkills).toHaveBeenCalledTimes(1);
+    expect(onDisableAllSkills).toHaveBeenCalledTimes(1);
+  });
+
+  it("filters_skills_list_from_search_input", () => {
+    render(
+      createElement(AgentSettingsPanel, {
+        agent: createAgent(),
+        mode: "skills",
+        onClose: vi.fn(),
+        onDelete: vi.fn(),
+        onToolCallingToggle: vi.fn(),
+        onThinkingTracesToggle: vi.fn(),
+        cronJobs: [],
+        cronLoading: false,
+        cronError: null,
+        cronRunBusyJobId: null,
+        cronDeleteBusyJobId: null,
+        onRunCronJob: vi.fn(),
+        onDeleteCronJob: vi.fn(),
+        skillsReport: createSkillsReport(),
+      })
+    );
+
+    fireEvent.change(screen.getByLabelText("Search skills"), {
+      target: { value: "browse" },
+    });
+
+    expect(screen.getByText("browser")).toBeInTheDocument();
+    expect(screen.queryByText("github")).not.toBeInTheDocument();
+  });
+
+  it("toggles_skill_access_with_explicit_allowlist_state", () => {
+    const onSetSkillEnabled = vi.fn();
+    render(
+      createElement(AgentSettingsPanel, {
+        agent: createAgent(),
+        mode: "skills",
+        onClose: vi.fn(),
+        onDelete: vi.fn(),
+        onToolCallingToggle: vi.fn(),
+        onThinkingTracesToggle: vi.fn(),
+        cronJobs: [],
+        cronLoading: false,
+        cronError: null,
+        cronRunBusyJobId: null,
+        cronDeleteBusyJobId: null,
+        onRunCronJob: vi.fn(),
+        onDeleteCronJob: vi.fn(),
+        skillsReport: createSkillsReport(),
+        skillsAllowlist: ["github"],
+        onSetSkillEnabled,
+      })
+    );
+
+    const githubToggle = screen.getByRole("switch", { name: "Skill github" });
+    const browserToggle = screen.getByRole("switch", { name: "Skill browser" });
+    expect(githubToggle).toHaveAttribute("aria-checked", "true");
+    expect(browserToggle).toHaveAttribute("aria-checked", "false");
+
+    fireEvent.click(githubToggle);
+    fireEvent.click(browserToggle);
+    expect(onSetSkillEnabled).toHaveBeenNthCalledWith(1, "github", false);
+    expect(onSetSkillEnabled).toHaveBeenNthCalledWith(2, "browser", true);
+  });
+
+  it("shows_enabled_count_based_on_visible_skills_not_raw_allowlist_size", () => {
+    render(
+      createElement(AgentSettingsPanel, {
+        agent: createAgent(),
+        mode: "skills",
+        onClose: vi.fn(),
+        onDelete: vi.fn(),
+        onToolCallingToggle: vi.fn(),
+        onThinkingTracesToggle: vi.fn(),
+        cronJobs: [],
+        cronLoading: false,
+        cronError: null,
+        cronRunBusyJobId: null,
+        cronDeleteBusyJobId: null,
+        onRunCronJob: vi.fn(),
+        onDeleteCronJob: vi.fn(),
+        skillsReport: createSkillsReport(),
+        skillsAllowlist: ["github", "missing-skill"],
+      })
+    );
+
+    expect(screen.getByText("1/2")).toBeInTheDocument();
+  });
+
+  it("shows_skills_loading_and_error_states", () => {
+    const { rerender } = render(
+      createElement(AgentSettingsPanel, {
+        agent: createAgent(),
+        mode: "skills",
+        onClose: vi.fn(),
+        onDelete: vi.fn(),
+        onToolCallingToggle: vi.fn(),
+        onThinkingTracesToggle: vi.fn(),
+        cronJobs: [],
+        cronLoading: false,
+        cronError: null,
+        cronRunBusyJobId: null,
+        cronDeleteBusyJobId: null,
+        onRunCronJob: vi.fn(),
+        onDeleteCronJob: vi.fn(),
+        skillsLoading: true,
+      })
+    );
+
+    expect(screen.getByText("Loading skills...")).toBeInTheDocument();
+
+    rerender(
+      createElement(AgentSettingsPanel, {
+        agent: createAgent(),
+        mode: "skills",
+        onClose: vi.fn(),
+        onDelete: vi.fn(),
+        onToolCallingToggle: vi.fn(),
+        onThinkingTracesToggle: vi.fn(),
+        cronJobs: [],
+        cronLoading: false,
+        cronError: null,
+        cronRunBusyJobId: null,
+        cronDeleteBusyJobId: null,
+        onRunCronJob: vi.fn(),
+        onDeleteCronJob: vi.fn(),
+        skillsLoading: false,
+        skillsError: "boom",
+      })
+    );
+
+    expect(screen.getByText("boom")).toBeInTheDocument();
   });
 
   it("renders_automations_section_when_mode_is_automations", () => {

@@ -120,7 +120,7 @@ const CREATE_AGENT_DEFAULT_PERMISSIONS: AgentPermissionsDraft = {
 };
 
 type MobilePane = "fleet" | "chat";
-type SettingsSidebarItem = "personality" | "capabilities" | "automations" | "advanced";
+type SettingsSidebarItem = SettingsRouteTab;
 
 const RESERVED_MAIN_AGENT_ID = "main";
 
@@ -329,6 +329,23 @@ const AgentStudioPage = () => {
       agent: inspectSidebarAgent,
       existingTools: tools,
     });
+  }, [gatewayConfigSnapshot, inspectSidebarAgent]);
+  const settingsAgentSkillsAllowlist = useMemo(() => {
+    if (!inspectSidebarAgent) return undefined;
+    const baseConfig =
+      gatewayConfigSnapshot?.config &&
+      typeof gatewayConfigSnapshot.config === "object" &&
+      !Array.isArray(gatewayConfigSnapshot.config)
+        ? (gatewayConfigSnapshot.config as Record<string, unknown>)
+        : undefined;
+    const list = readConfigAgentList(baseConfig);
+    const configEntry = list.find((entry) => entry.id === inspectSidebarAgent.agentId) ?? null;
+    const raw = configEntry?.skills;
+    if (!Array.isArray(raw)) return undefined;
+    return raw
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
   }, [gatewayConfigSnapshot, inspectSidebarAgent]);
   const focusedPendingExecApprovals = useMemo(() => {
     if (!focusedAgentId) return unscopedPendingExecApprovals;
@@ -1363,6 +1380,7 @@ const AgentStudioPage = () => {
                     [
                       { id: "personality", label: "Behavior" },
                       { id: "capabilities", label: "Capabilities" },
+                      { id: "skills", label: "Skills" },
                       { id: "automations", label: "Automations" },
                       { id: "advanced", label: "Advanced" },
                     ] as const
@@ -1427,6 +1445,8 @@ const AgentStudioPage = () => {
                             mode={
                               effectiveSettingsTab === "automations"
                                 ? "automations"
+                                : effectiveSettingsTab === "skills"
+                                  ? "skills"
                                 : effectiveSettingsTab === "advanced"
                                   ? "advanced"
                                   : "capabilities"
@@ -1450,6 +1470,24 @@ const AgentStudioPage = () => {
                             }
                             onThinkingTracesToggle={(enabled) =>
                               handleThinkingTracesToggle(inspectSidebarAgent.agentId, enabled)
+                            }
+                            skillsReport={settingsMutationController.settingsSkillsReport}
+                            skillsLoading={settingsMutationController.settingsSkillsLoading}
+                            skillsError={settingsMutationController.settingsSkillsError}
+                            skillsBusy={settingsMutationController.settingsSkillsBusy}
+                            skillsAllowlist={settingsAgentSkillsAllowlist}
+                            onUseAllSkills={() =>
+                              settingsMutationController.handleUseAllSkills(inspectSidebarAgent.agentId)
+                            }
+                            onDisableAllSkills={() =>
+                              settingsMutationController.handleDisableAllSkills(inspectSidebarAgent.agentId)
+                            }
+                            onSetSkillEnabled={(skillName, enabled) =>
+                              settingsMutationController.handleSetSkillEnabled(
+                                inspectSidebarAgent.agentId,
+                                skillName,
+                                enabled
+                              )
                             }
                             cronJobs={settingsMutationController.settingsCronJobs}
                             cronLoading={settingsMutationController.settingsCronLoading}

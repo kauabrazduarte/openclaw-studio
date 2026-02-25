@@ -14,6 +14,11 @@ import { updateAgentPermissionsViaStudio } from "@/features/agents/operations/ag
 import { runAgentConfigMutationLifecycle } from "@/features/agents/operations/mutationLifecycleWorkflow";
 import { runCronJobNow, removeCronJob } from "@/lib/cron/types";
 import { shouldAwaitDisconnectRestartForRemoteMutation } from "@/lib/gateway/gatewayReloadMode";
+import {
+  readGatewayAgentSkillsAllowlist,
+  updateGatewayAgentSkillsAllowlist,
+} from "@/lib/gateway/agentConfig";
+import { loadAgentSkillStatus } from "@/lib/skills/types";
 
 let restartBlockHookParams:
   | {
@@ -83,6 +88,25 @@ vi.mock("@/lib/cron/types", async () => {
 
 vi.mock("@/lib/gateway/gatewayReloadMode", () => ({
   shouldAwaitDisconnectRestartForRemoteMutation: vi.fn(async () => false),
+}));
+
+vi.mock("@/lib/gateway/agentConfig", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/gateway/agentConfig")>(
+    "@/lib/gateway/agentConfig"
+  );
+  return {
+    ...actual,
+    readGatewayAgentSkillsAllowlist: vi.fn(async () => undefined),
+    updateGatewayAgentSkillsAllowlist: vi.fn(async () => undefined),
+  };
+});
+
+vi.mock("@/lib/skills/types", () => ({
+  loadAgentSkillStatus: vi.fn(async () => ({
+    workspaceDir: "/tmp/workspace",
+    managedSkillsDir: "/tmp/skills",
+    skills: [],
+  })),
 }));
 
 type ControllerValue = ReturnType<typeof useAgentSettingsMutationController>;
@@ -181,6 +205,9 @@ describe("useAgentSettingsMutationController", () => {
   const mockedRunLifecycle = vi.mocked(runAgentConfigMutationLifecycle);
   const mockedUpdateAgentPermissions = vi.mocked(updateAgentPermissionsViaStudio);
   const mockedShouldAwaitRemoteRestart = vi.mocked(shouldAwaitDisconnectRestartForRemoteMutation);
+  const mockedReadGatewayAgentSkillsAllowlist = vi.mocked(readGatewayAgentSkillsAllowlist);
+  const mockedUpdateGatewayAgentSkillsAllowlist = vi.mocked(updateGatewayAgentSkillsAllowlist);
+  const mockedLoadAgentSkillStatus = vi.mocked(loadAgentSkillStatus);
 
   beforeEach(() => {
     restartBlockHookParams = null;
@@ -191,7 +218,17 @@ describe("useAgentSettingsMutationController", () => {
     mockedRunLifecycle.mockReset();
     mockedUpdateAgentPermissions.mockReset();
     mockedShouldAwaitRemoteRestart.mockReset();
+    mockedReadGatewayAgentSkillsAllowlist.mockReset();
+    mockedUpdateGatewayAgentSkillsAllowlist.mockReset();
+    mockedLoadAgentSkillStatus.mockReset();
     mockedShouldAwaitRemoteRestart.mockResolvedValue(false);
+    mockedReadGatewayAgentSkillsAllowlist.mockResolvedValue(undefined);
+    mockedUpdateGatewayAgentSkillsAllowlist.mockResolvedValue(undefined);
+    mockedLoadAgentSkillStatus.mockResolvedValue({
+      workspaceDir: "/tmp/workspace",
+      managedSkillsDir: "/tmp/skills",
+      skills: [],
+    });
   });
 
   afterEach(() => {
@@ -368,5 +405,132 @@ describe("useAgentSettingsMutationController", () => {
     });
 
     expect(mockedPerformCronCreateFlow).toHaveBeenCalledTimes(1);
+  });
+
+  it("loads_skills_when_settings_skills_tab_is_active", async () => {
+    const report = {
+      workspaceDir: "/tmp/workspace",
+      managedSkillsDir: "/tmp/skills",
+      skills: [],
+    };
+    mockedLoadAgentSkillStatus.mockResolvedValue(report);
+    const ctx = renderController({
+      settingsRouteActive: true,
+      inspectSidebarAgentId: "agent-1",
+      inspectSidebarTab: "skills",
+    });
+
+    await waitFor(() => {
+      expect(mockedLoadAgentSkillStatus).toHaveBeenCalledWith(expect.anything(), "agent-1");
+      expect(ctx.getValue().settingsSkillsReport).toEqual(report);
+    });
+  });
+
+  it("use_all_and_disable_all_skills_write_via_config_queue", async () => {
+    const ctx = renderController();
+
+    await act(async () => {
+      await ctx.getValue().handleUseAllSkills("agent-1");
+      await ctx.getValue().handleDisableAllSkills("agent-1");
+    });
+
+    expect(ctx.enqueueConfigMutation).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "update-agent-skills" })
+    );
+    expect(mockedUpdateGatewayAgentSkillsAllowlist).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ agentId: "agent-1", mode: "all" })
+    );
+    expect(mockedUpdateGatewayAgentSkillsAllowlist).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ agentId: "agent-1", mode: "none" })
+    );
+    expect(ctx.loadAgents).toHaveBeenCalledTimes(2);
+    expect(ctx.refreshGatewayConfigSnapshot).toHaveBeenCalledTimes(2);
+    expect(mockedLoadAgentSkillStatus).not.toHaveBeenCalled();
+  });
+
+  it("disabling_one_skill_from_implicit_all_writes_explicit_allowlist", async () => {
+    mockedLoadAgentSkillStatus.mockResolvedValue({
+      workspaceDir: "/tmp/workspace",
+      managedSkillsDir: "/tmp/skills",
+      skills: [
+        {
+          name: "github",
+          description: "",
+          source: "shared",
+          bundled: false,
+          filePath: "/tmp/skills/github/SKILL.md",
+          baseDir: "/tmp/skills/github",
+          skillKey: "github",
+          always: false,
+          disabled: false,
+          blockedByAllowlist: false,
+          eligible: true,
+          requirements: { bins: [], env: [], config: [], os: [] },
+          missing: { bins: [], env: [], config: [], os: [] },
+          configChecks: [],
+          install: [],
+        },
+        {
+          name: "browser",
+          description: "",
+          source: "bundled",
+          bundled: true,
+          filePath: "/tmp/skills/browser/SKILL.md",
+          baseDir: "/tmp/skills/browser",
+          skillKey: "browser",
+          always: false,
+          disabled: false,
+          blockedByAllowlist: false,
+          eligible: true,
+          requirements: { bins: [], env: [], config: [], os: [] },
+          missing: { bins: [], env: [], config: [], os: [] },
+          configChecks: [],
+          install: [],
+        },
+        {
+          name: "slack",
+          description: "",
+          source: "shared",
+          bundled: false,
+          filePath: "/tmp/skills/slack/SKILL.md",
+          baseDir: "/tmp/skills/slack",
+          skillKey: "slack",
+          always: false,
+          disabled: false,
+          blockedByAllowlist: false,
+          eligible: true,
+          requirements: { bins: [], env: [], config: [], os: [] },
+          missing: { bins: [], env: [], config: [], os: [] },
+          configChecks: [],
+          install: [],
+        },
+      ],
+    });
+    const ctx = renderController({
+      settingsRouteActive: true,
+      inspectSidebarAgentId: "agent-1",
+      inspectSidebarTab: "skills",
+    });
+
+    await waitFor(() => {
+      expect(ctx.getValue().settingsSkillsReport?.skills.length).toBe(3);
+    });
+
+    await act(async () => {
+      await ctx.getValue().handleSetSkillEnabled("agent-1", "browser", false);
+    });
+
+    expect(mockedReadGatewayAgentSkillsAllowlist).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: "agent-1" })
+    );
+    expect(mockedUpdateGatewayAgentSkillsAllowlist).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        agentId: "agent-1",
+        mode: "allowlist",
+        skillNames: ["github", "slack"],
+      })
+    );
   });
 });

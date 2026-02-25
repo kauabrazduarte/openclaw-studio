@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { AgentPermissionsDraft } from "@/features/agents/operations/agentPermissionsOperation";
 import { updateAgentPermissionsViaStudio } from "@/features/agents/operations/agentPermissionsOperation";
@@ -29,8 +29,13 @@ import {
 import type { GatewayClient, GatewayStatus } from "@/lib/gateway/GatewayClient";
 import { isGatewayDisconnectLikeError } from "@/lib/gateway/GatewayClient";
 import type { GatewayModelPolicySnapshot } from "@/lib/gateway/models";
-import { renameGatewayAgent } from "@/lib/gateway/agentConfig";
+import {
+  readGatewayAgentSkillsAllowlist,
+  renameGatewayAgent,
+  updateGatewayAgentSkillsAllowlist,
+} from "@/lib/gateway/agentConfig";
 import { fetchJson } from "@/lib/http";
+import { loadAgentSkillStatus, type SkillStatusReport } from "@/lib/skills/types";
 
 export type RestartingMutationBlockState = MutationBlockState & { kind: MutationWorkflowKind };
 
@@ -62,6 +67,11 @@ export type UseAgentSettingsMutationControllerParams = {
 };
 
 export function useAgentSettingsMutationController(params: UseAgentSettingsMutationControllerParams) {
+  const skillsLoadRequestIdRef = useRef(0);
+  const [settingsSkillsReport, setSettingsSkillsReport] = useState<SkillStatusReport | null>(null);
+  const [settingsSkillsLoading, setSettingsSkillsLoading] = useState(false);
+  const [settingsSkillsError, setSettingsSkillsError] = useState<string | null>(null);
+  const [settingsSkillsBusy, setSettingsSkillsBusy] = useState(false);
   const [settingsCronJobs, setSettingsCronJobs] = useState<CronJobSummary[]>([]);
   const [settingsCronLoading, setSettingsCronLoading] = useState(false);
   const [settingsCronError, setSettingsCronError] = useState<string | null>(null);
@@ -98,6 +108,68 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
       params.status,
     ]
   );
+
+  const loadSkillsForSettingsAgent = useCallback(
+    async (agentId: string) => {
+      const requestId = skillsLoadRequestIdRef.current + 1;
+      skillsLoadRequestIdRef.current = requestId;
+      const resolvedAgentId = agentId.trim();
+      if (!resolvedAgentId) {
+        if (requestId === skillsLoadRequestIdRef.current) {
+          setSettingsSkillsReport(null);
+          setSettingsSkillsError("Failed to load skills: missing agent id.");
+        }
+        return;
+      }
+      setSettingsSkillsLoading(true);
+      setSettingsSkillsError(null);
+      try {
+        const report = await loadAgentSkillStatus(params.client, resolvedAgentId);
+        if (requestId !== skillsLoadRequestIdRef.current) {
+          return;
+        }
+        setSettingsSkillsReport(report);
+      } catch (err) {
+        if (requestId !== skillsLoadRequestIdRef.current) {
+          return;
+        }
+        const message = err instanceof Error ? err.message : "Failed to load skills.";
+        setSettingsSkillsReport(null);
+        setSettingsSkillsError(message);
+        if (!isGatewayDisconnectLikeError(err)) {
+          console.error(message);
+        }
+      } finally {
+        if (requestId === skillsLoadRequestIdRef.current) {
+          setSettingsSkillsLoading(false);
+        }
+      }
+    },
+    [params.client]
+  );
+
+  useEffect(() => {
+    if (
+      !params.settingsRouteActive ||
+      !params.inspectSidebarAgentId ||
+      params.status !== "connected" ||
+      params.inspectSidebarTab !== "skills"
+    ) {
+      skillsLoadRequestIdRef.current += 1;
+      setSettingsSkillsReport(null);
+      setSettingsSkillsLoading(false);
+      setSettingsSkillsError(null);
+      setSettingsSkillsBusy(false);
+      return;
+    }
+    void loadSkillsForSettingsAgent(params.inspectSidebarAgentId);
+  }, [
+    loadSkillsForSettingsAgent,
+    params.inspectSidebarAgentId,
+    params.inspectSidebarTab,
+    params.settingsRouteActive,
+    params.status,
+  ]);
 
   const loadCronJobsForSettingsAgent = useCallback(
     async (agentId: string) => {
@@ -520,7 +592,145 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
     [mutationContext, params]
   );
 
+  const runSkillsMutation = useCallback(
+    async (input: {
+      agentId: string;
+      decisionKind: "use-all-skills" | "disable-all-skills" | "set-skill-enabled";
+      skillName?: string;
+      run: (normalizedAgentId: string) => Promise<void>;
+    }) => {
+      const decision = planAgentSettingsMutation(
+        {
+          kind: input.decisionKind,
+          agentId: input.agentId,
+          ...(input.skillName ? { skillName: input.skillName } : {}),
+        },
+        mutationContext
+      );
+      if (decision.kind === "deny") {
+        if (decision.message) {
+          setSettingsSkillsError(decision.message);
+        }
+        return;
+      }
+
+      const agent =
+        params.agents.find((entry) => entry.agentId === decision.normalizedAgentId) ?? null;
+      setSettingsSkillsBusy(true);
+      setSettingsSkillsError(null);
+      try {
+        await params.enqueueConfigMutation({
+          kind: "update-agent-skills",
+          label: `Update skills for ${agent?.name ?? decision.normalizedAgentId}`,
+          run: async () => {
+            await input.run(decision.normalizedAgentId);
+            await params.loadAgents();
+            await params.refreshGatewayConfigSnapshot();
+            if (
+              params.settingsRouteActive &&
+              params.inspectSidebarTab === "skills" &&
+              params.inspectSidebarAgentId === decision.normalizedAgentId &&
+              params.status === "connected"
+            ) {
+              await loadSkillsForSettingsAgent(decision.normalizedAgentId);
+            }
+          },
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to update skills.";
+        setSettingsSkillsError(message);
+        if (!isGatewayDisconnectLikeError(err)) {
+          console.error(message);
+        }
+      } finally {
+        setSettingsSkillsBusy(false);
+      }
+    },
+    [loadSkillsForSettingsAgent, mutationContext, params]
+  );
+
+  const handleUseAllSkills = useCallback(
+    async (agentId: string) => {
+      await runSkillsMutation({
+        agentId,
+        decisionKind: "use-all-skills",
+        run: async (normalizedAgentId) => {
+          await updateGatewayAgentSkillsAllowlist({
+            client: params.client,
+            agentId: normalizedAgentId,
+            mode: "all",
+          });
+        },
+      });
+    },
+    [params.client, runSkillsMutation]
+  );
+
+  const handleDisableAllSkills = useCallback(
+    async (agentId: string) => {
+      await runSkillsMutation({
+        agentId,
+        decisionKind: "disable-all-skills",
+        run: async (normalizedAgentId) => {
+          await updateGatewayAgentSkillsAllowlist({
+            client: params.client,
+            agentId: normalizedAgentId,
+            mode: "none",
+          });
+        },
+      });
+    },
+    [params.client, runSkillsMutation]
+  );
+
+  const handleSetSkillEnabled = useCallback(
+    async (agentId: string, skillName: string, enabled: boolean) => {
+      await runSkillsMutation({
+        agentId,
+        decisionKind: "set-skill-enabled",
+        skillName,
+        run: async (normalizedAgentId) => {
+          const resolvedSkillName = skillName.trim();
+          const visibleSkillNames = Array.from(
+            new Set(
+              (settingsSkillsReport?.skills ?? [])
+                .map((entry) => entry.name.trim())
+                .filter((name) => name.length > 0)
+            )
+          );
+          if (visibleSkillNames.length === 0) {
+            throw new Error("Cannot update skill access: no skills available for this agent.");
+          }
+          const existingAllowlist = await readGatewayAgentSkillsAllowlist({
+            client: params.client,
+            agentId: normalizedAgentId,
+          });
+          const baseline = existingAllowlist ?? visibleSkillNames;
+          const next = new Set(
+            baseline.map((value) => value.trim()).filter((value) => value.length > 0)
+          );
+          if (enabled) {
+            next.add(resolvedSkillName);
+          } else {
+            next.delete(resolvedSkillName);
+          }
+          await updateGatewayAgentSkillsAllowlist({
+            client: params.client,
+            agentId: normalizedAgentId,
+            mode: "allowlist",
+            skillNames: [...next],
+          });
+        },
+      });
+    },
+    [params.client, runSkillsMutation, settingsSkillsReport]
+  );
+
   return {
+    settingsSkillsReport,
+    settingsSkillsLoading,
+    settingsSkillsError,
+    settingsSkillsBusy,
     settingsCronJobs,
     settingsCronLoading,
     settingsCronError,
@@ -537,5 +747,8 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
     handleDeleteCronJob,
     handleRenameAgent,
     handleUpdateAgentPermissions,
+    handleUseAllSkills,
+    handleDisableAllSkills,
+    handleSetSkillEnabled,
   };
 }

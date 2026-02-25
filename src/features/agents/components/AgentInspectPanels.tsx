@@ -18,6 +18,7 @@ import type { AgentState } from "@/features/agents/state/store";
 import type { CronCreateDraft, CronCreateTemplateId } from "@/lib/cron/createPayloadBuilder";
 import { formatCronPayload, formatCronSchedule, type CronJobSummary } from "@/lib/cron/types";
 import type { GatewayClient } from "@/lib/gateway/GatewayClient";
+import type { SkillStatusReport } from "@/lib/skills/types";
 import { readGatewayAgentFile, writeGatewayAgentFile } from "@/lib/gateway/agentFiles";
 import {
   resolveExecutionRoleFromAgent,
@@ -88,7 +89,7 @@ const AgentInspectHeader = ({
 
 type AgentSettingsPanelProps = {
   agent: AgentState;
-  mode?: "capabilities" | "automations" | "advanced";
+  mode?: "capabilities" | "skills" | "automations" | "advanced";
   showHeader?: boolean;
   onClose: () => void;
   permissionsDraft?: AgentPermissionsDraft;
@@ -107,6 +108,14 @@ type AgentSettingsPanelProps = {
   cronCreateBusy?: boolean;
   onCreateCronJob?: (draft: CronCreateDraft) => Promise<void> | void;
   controlUiUrl?: string | null;
+  skillsReport?: SkillStatusReport | null;
+  skillsLoading?: boolean;
+  skillsError?: string | null;
+  skillsBusy?: boolean;
+  skillsAllowlist?: string[] | undefined;
+  onUseAllSkills?: () => Promise<void> | void;
+  onDisableAllSkills?: () => Promise<void> | void;
+  onSetSkillEnabled?: (skillName: string, enabled: boolean) => Promise<void> | void;
 };
 
 const formatCronStateLine = (job: CronJobSummary): string | null => {
@@ -290,6 +299,14 @@ export const AgentSettingsPanel = ({
   cronCreateBusy = false,
   onCreateCronJob = () => {},
   controlUiUrl = null,
+  skillsReport = null,
+  skillsLoading = false,
+  skillsError = null,
+  skillsBusy = false,
+  skillsAllowlist,
+  onUseAllSkills = () => {},
+  onDisableAllSkills = () => {},
+  onSetSkillEnabled = () => {},
 }: AgentSettingsPanelProps) => {
   const initialPermissionsDraft =
     permissionsDraft ?? resolvePresetDefaultsForRole(resolveExecutionRoleFromAgent(agent));
@@ -309,6 +326,7 @@ export const AgentSettingsPanel = ({
   const [cronCreateStep, setCronCreateStep] = useState(0);
   const [cronCreateError, setCronCreateError] = useState<string | null>(null);
   const [cronDraft, setCronDraft] = useState<CronCreateDraft>(createInitialCronDraft);
+  const [skillsFilter, setSkillsFilter] = useState("");
 
   const resolvedExecutionRole = useMemo(() => resolveExecutionRoleFromAgent(agent), [agent]);
   const resolvedPermissionsDraft = useMemo(
@@ -376,6 +394,10 @@ export const AgentSettingsPanel = ({
       }
     };
   }, [permissionsDirty, permissionsDraftValue, permissionsSaving, runPermissionsSave]);
+
+  useEffect(() => {
+    setSkillsFilter("");
+  }, [agent.agentId]);
 
   const openCronCreate = () => {
     setCronCreateOpen(true);
@@ -463,7 +485,28 @@ export const AgentSettingsPanel = ({
     }
   };
 
-  const panelLabel = mode === "advanced" ? "Advanced" : "";
+  const skillEntries = skillsReport?.skills ?? [];
+  const normalizedAllowlist = useMemo(
+    () =>
+      (skillsAllowlist ?? [])
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0),
+    [skillsAllowlist]
+  );
+  const allowlistSet = useMemo(() => new Set(normalizedAllowlist), [normalizedAllowlist]);
+  const usingAllowlist = skillsAllowlist !== undefined;
+  const enabledSkillCount = useMemo(() => {
+    if (!usingAllowlist) return skillEntries.length;
+    return skillEntries.reduce((count, skill) => count + (allowlistSet.has(skill.name) ? 1 : 0), 0);
+  }, [allowlistSet, skillEntries, usingAllowlist]);
+  const filteredSkillEntries = useMemo(() => {
+    const query = skillsFilter.trim().toLowerCase();
+    if (!query) return skillEntries;
+    return skillEntries.filter((skill) =>
+      [skill.name, skill.description, skill.source].join(" ").toLowerCase().includes(query)
+    );
+  }, [skillEntries, skillsFilter]);
+  const panelLabel = mode === "advanced" ? "Advanced" : mode === "skills" ? "Skills" : "";
   const canOpenControlUi = typeof controlUiUrl === "string" && controlUiUrl.trim().length > 0;
   const timedAutomationStepMeta =
     TIMED_AUTOMATION_STEP_META[cronCreateStep] ??
@@ -587,25 +630,6 @@ export const AgentSettingsPanel = ({
                     <button
                       type="button"
                       role="switch"
-                      aria-label="Skills"
-                      aria-checked="false"
-                      className="ui-switch self-center"
-                      disabled
-                    >
-                      <span className="ui-switch-thumb" />
-                    </button>
-                    <div className="sidebar-copy flex flex-col">
-                      <span className="text-[11px] font-medium text-foreground/88">Skills</span>
-                      <span className="text-[10px] text-muted-foreground/70">Coming soon</span>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground/55" aria-hidden="true" />
-                </div>
-                <div className="ui-settings-row flex min-h-[68px] items-center justify-between gap-6 px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      role="switch"
                       aria-label="Browser automation"
                       aria-checked="false"
                       className="ui-switch self-center"
@@ -646,6 +670,129 @@ export const AgentSettingsPanel = ({
               ) : null}
             </section>
           </>
+        ) : null}
+
+        {mode === "skills" ? (
+          <section className="sidebar-section" data-testid="agent-settings-skills">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="sidebar-section-title">Skills</h3>
+              <div className="font-mono text-[10px] text-muted-foreground">
+                {usingAllowlist ? `${enabledSkillCount}/${skillEntries.length}` : `All (${skillEntries.length})`}
+              </div>
+            </div>
+            <div className="mt-2 text-[11px] text-muted-foreground">
+              Control which discovered skills this agent can use.
+            </div>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                value={skillsFilter}
+                onChange={(event) => setSkillsFilter(event.target.value)}
+                placeholder="Search skills"
+                className="w-full rounded-md border border-border/60 bg-surface-1 px-3 py-2 text-[11px] text-foreground outline-none transition focus:border-border"
+                aria-label="Search skills"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="ui-btn-secondary px-3 py-2 font-mono text-[10px] font-semibold tracking-[0.06em] disabled:cursor-not-allowed disabled:opacity-65"
+                  disabled={skillsBusy || skillsLoading}
+                  onClick={() => {
+                    void onUseAllSkills();
+                  }}
+                >
+                  Use all
+                </button>
+                <button
+                  type="button"
+                  className="ui-btn-secondary px-3 py-2 font-mono text-[10px] font-semibold tracking-[0.06em] disabled:cursor-not-allowed disabled:opacity-65"
+                  disabled={skillsBusy || skillsLoading}
+                  onClick={() => {
+                    void onDisableAllSkills();
+                  }}
+                >
+                  Disable all
+                </button>
+              </div>
+            </div>
+            {skillsLoading ? (
+              <div className="mt-3 text-[11px] text-muted-foreground">Loading skills...</div>
+            ) : null}
+            {!skillsLoading && skillsError ? (
+              <div className="ui-alert-danger mt-3 rounded-md px-3 py-2 text-xs">{skillsError}</div>
+            ) : null}
+            {!skillsLoading && !skillsError && filteredSkillEntries.length === 0 ? (
+              <div className="mt-3 text-[11px] text-muted-foreground">No matching skills.</div>
+            ) : null}
+            {!skillsLoading && !skillsError && filteredSkillEntries.length > 0 ? (
+              <div className="mt-3 flex flex-col gap-2">
+                {filteredSkillEntries.map((skill) => {
+                  const enabled = usingAllowlist ? allowlistSet.has(skill.name) : true;
+                  const missingCount =
+                    skill.missing.bins.length +
+                    skill.missing.env.length +
+                    skill.missing.config.length +
+                    skill.missing.os.length;
+                  return (
+                    <div
+                      key={skill.name}
+                      className="ui-settings-row flex min-h-[68px] items-center justify-between gap-4 px-4 py-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-[11px] font-medium text-foreground/88">
+                            {skill.name}
+                          </span>
+                          <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground">
+                            {skill.source}
+                          </span>
+                          <span
+                            className={`rounded px-1.5 py-0.5 font-mono text-[9px] ${
+                              skill.eligible
+                                ? "bg-emerald-500/15 text-emerald-400"
+                                : "bg-amber-500/15 text-amber-300"
+                            }`}
+                          >
+                            {skill.eligible ? "eligible" : "blocked"}
+                          </span>
+                          {skill.disabled ? (
+                            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 font-mono text-[9px] text-amber-300">
+                              disabled
+                            </span>
+                          ) : null}
+                          {skill.blockedByAllowlist ? (
+                            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 font-mono text-[9px] text-amber-300">
+                              allowlist block
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="mt-1 text-[10px] text-muted-foreground/70">
+                          {skill.description}
+                        </div>
+                        {missingCount > 0 ? (
+                          <div className="mt-1 text-[10px] text-muted-foreground/70">
+                            Missing requirements: {missingCount}
+                          </div>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-label={`Skill ${skill.name}`}
+                        aria-checked={enabled}
+                        className={`ui-switch self-center ${enabled ? "ui-switch--on" : ""}`}
+                        disabled={skillsBusy}
+                        onClick={() => {
+                          void onSetSkillEnabled(skill.name, !enabled);
+                        }}
+                      >
+                        <span className="ui-switch-thumb" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+          </section>
         ) : null}
 
         {mode === "automations" ? (

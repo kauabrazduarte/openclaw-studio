@@ -20,12 +20,22 @@ const createContext = (
 
 describe("agentSettingsMutationWorkflow", () => {
   it("denies_guarded_actions_when_not_connected", () => {
-    const result = planAgentSettingsMutation(
+    const renameResult = planAgentSettingsMutation(
       { kind: "rename-agent", agentId: "agent-1" },
       createContext({ status: "disconnected" })
     );
+    const skillsResult = planAgentSettingsMutation(
+      { kind: "use-all-skills", agentId: "agent-1" },
+      createContext({ status: "disconnected" })
+    );
 
-    expect(result).toEqual({
+    expect(renameResult).toEqual({
+      kind: "deny",
+      reason: "start-guard-deny",
+      message: null,
+      guardReason: "not-connected",
+    });
+    expect(skillsResult).toEqual({
       kind: "deny",
       reason: "start-guard-deny",
       message: null,
@@ -91,6 +101,19 @@ describe("agentSettingsMutationWorkflow", () => {
     expect(deleteResult).toEqual({
       kind: "allow",
       normalizedAgentId: "agent-2",
+    });
+  });
+
+  it("denies_skill_toggle_when_skill_name_is_missing", () => {
+    const result = planAgentSettingsMutation(
+      { kind: "set-skill-enabled", agentId: "agent-1", skillName: "  " },
+      createContext()
+    );
+
+    expect(result).toEqual({
+      kind: "deny",
+      reason: "missing-skill-name",
+      message: null,
     });
   });
 });
