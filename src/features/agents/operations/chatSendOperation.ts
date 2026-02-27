@@ -1,4 +1,8 @@
-import { syncGatewaySessionSettings, type GatewayClient } from "@/lib/gateway/GatewayClient";
+import {
+  isWebchatSessionMutationBlockedError,
+  syncGatewaySessionSettings,
+  type GatewayClient,
+} from "@/lib/gateway/GatewayClient";
 import {
   buildAgentInstruction,
   isMetaMarkdown,
@@ -151,21 +155,33 @@ export async function sendChatMessageViaStudio(params: {
 
     let createdSession = agent.sessionCreated;
     if (!agent.sessionSettingsSynced) {
-      await syncGatewaySessionSettings({
-        client: params.client as unknown as GatewayClient,
-        sessionKey: params.sessionKey,
-        model: agent.model ?? null,
-        thinkingLevel: agent.thinkingLevel ?? null,
-        execHost: agent.sessionExecHost,
-        execSecurity: agent.sessionExecSecurity,
-        execAsk: agent.sessionExecAsk,
-      });
-      createdSession = true;
-      params.dispatch({
-        type: "updateAgent",
-        agentId,
-        patch: { sessionSettingsSynced: true, sessionCreated: true },
-      });
+      try {
+        await syncGatewaySessionSettings({
+          client: params.client as unknown as GatewayClient,
+          sessionKey: params.sessionKey,
+          model: agent.model ?? null,
+          thinkingLevel: agent.thinkingLevel ?? null,
+          execHost: agent.sessionExecHost,
+          execSecurity: agent.sessionExecSecurity,
+          execAsk: agent.sessionExecAsk,
+        });
+        createdSession = true;
+        params.dispatch({
+          type: "updateAgent",
+          agentId,
+          patch: { sessionSettingsSynced: true, sessionCreated: true },
+        });
+      } catch (syncError) {
+        if (!isWebchatSessionMutationBlockedError(syncError)) {
+          throw syncError;
+        }
+        createdSession = true;
+        params.dispatch({
+          type: "updateAgent",
+          agentId,
+          patch: { sessionSettingsSynced: true, sessionCreated: true },
+        });
+      }
     }
 
     const sendResult = await params.client.call("chat.send", {
