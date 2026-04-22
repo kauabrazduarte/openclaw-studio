@@ -1,7 +1,18 @@
-import Image from "next/image";
 import { useMemo } from "react";
 
-import { buildAvatarDataUrl } from "@/lib/avatars/multiavatar";
+const AGENT_EMOJIS = [
+  "🤖","🦾","🧠","⚡","🔮","🛡️","💡","🎯","📊","🚀",
+  "⚙️","🔧","🎨","📝","🌐","💻","🔬","🌟","🔑","🏃",
+  "🦊","🐉","🦁","🦅","🎪","🎭","🔭","🧬","🌊","🔥",
+];
+
+function emojiFromSeed(seed: string): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = (Math.imul(31, h) + seed.charCodeAt(i)) >>> 0;
+  }
+  return AGENT_EMOJIS[h % AGENT_EMOJIS.length];
+}
 
 type AgentAvatarProps = {
   seed: string;
@@ -13,31 +24,19 @@ type AgentAvatarProps = {
 
 export const AgentAvatar = ({
   seed,
-  name,
-  avatarUrl,
   size = 112,
   isSelected = false,
 }: AgentAvatarProps) => {
-  const src = useMemo(() => {
-    const trimmed = avatarUrl?.trim();
-    if (trimmed) return trimmed;
-    return buildAvatarDataUrl(seed);
-  }, [avatarUrl, seed]);
+  const emoji = useMemo(() => emojiFromSeed(seed), [seed]);
+
+  const fontSize = Math.round(size * 0.52);
 
   return (
     <div
-      className={`flex items-center justify-center overflow-hidden rounded-full border border-border/80 bg-card transition-transform duration-300 ${isSelected ? "agent-avatar-selected scale-[1.02]" : ""}`}
-      style={{ width: size, height: size }}
+      className={`agent-emoji-avatar${isSelected ? " agent-emoji-avatar--selected" : ""}`}
+      style={{ width: size, height: size, fontSize }}
     >
-      <Image
-        className="pointer-events-none h-full w-full select-none"
-        src={src}
-        alt={`Avatar for ${name}`}
-        width={size}
-        height={size}
-        unoptimized
-        draggable={false}
-      />
+      {emoji}
     </div>
   );
 };

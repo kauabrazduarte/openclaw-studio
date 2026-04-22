@@ -1,10 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Shuffle } from "lucide-react";
 import type { AgentCreateModalSubmitPayload } from "@/features/agents/creation/types";
-import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
-import { randomUUID } from "@/lib/uuid";
 
 type AgentCreateModalProps = {
   open: boolean;
@@ -34,7 +31,6 @@ const AgentCreateModalContent = ({
   onSubmit,
 }: Omit<AgentCreateModalProps, "open">) => {
   const [name, setName] = useState(() => resolveInitialName(suggestedName));
-  const [avatarSeed, setAvatarSeed] = useState(() => randomUUID());
 
   const canSubmit = name.trim().length > 0;
 
@@ -42,7 +38,7 @@ const AgentCreateModalContent = ({
     if (!canSubmit || busy) return;
     const trimmedName = name.trim();
     if (!trimmedName) return;
-    void onSubmit({ name: trimmedName, avatarSeed });
+    void onSubmit({ name: trimmedName });
   };
 
   return (
@@ -93,25 +89,6 @@ const AgentCreateModalContent = ({
           </label>
           <div className="-mt-2 text-[11px] text-muted-foreground">
             You can rename this agent from the main chat header.
-          </div>
-          <div className="grid justify-items-center gap-2 border-t border-border/40 pt-3">
-            <div className={labelClassName}>Choose avatar</div>
-            <AgentAvatar
-              seed={avatarSeed}
-              name={name.trim() || "New Agent"}
-              size={64}
-              isSelected
-            />
-            <button
-              type="button"
-              aria-label="Shuffle avatar selection"
-              className="ui-btn-secondary inline-flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground"
-              onClick={() => setAvatarSeed(randomUUID())}
-              disabled={busy}
-            >
-              <Shuffle className="h-3.5 w-3.5" />
-              Shuffle
-            </button>
           </div>
 
           {submitError ? (

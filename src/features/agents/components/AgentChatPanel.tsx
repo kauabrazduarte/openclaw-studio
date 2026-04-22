@@ -14,7 +14,7 @@ import {
 import type { AgentState as AgentRecord } from "@/features/agents/state/store";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Check, ChevronRight, Clock, Cog, Maximize2, Pencil, Shuffle, Trash2, X } from "lucide-react";
+import { Check, ChevronRight, Clock, Cog, Maximize2, Pencil, Trash2, X } from "lucide-react";
 import type { GatewayModelChoice } from "@/lib/gateway/models";
 import { rewriteMediaLinesToMarkdown } from "@/lib/text/media-markdown";
 import { normalizeAssistantDisplayText } from "@/lib/text/assistantText";
@@ -1244,7 +1244,7 @@ export const AgentChatPanel = ({
   onSend,
   onRemoveQueuedMessage,
   onStopRun,
-  onAvatarShuffle,
+  onAvatarShuffle: _onAvatarShuffle,
   pendingExecApprovals = [],
   onResolveExecApproval,
 }: AgentChatPanelProps) => {
@@ -1600,28 +1600,13 @@ export const AgentChatPanel = ({
       <div className="px-3 pt-2 sm:px-4 sm:pt-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
-            <div className="group/avatar relative">
-              <AgentAvatar
-                seed={avatarSeed}
-                name={agent.name}
-                avatarUrl={agent.avatarUrl ?? null}
-                size={84}
-                isSelected={isSelected}
-              />
-              <button
-                className="nodrag ui-btn-icon ui-btn-icon-xs agent-avatar-shuffle-btn absolute bottom-0.5 right-0.5"
-                type="button"
-                aria-label="Shuffle avatar"
-                data-testid="agent-avatar-shuffle"
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onAvatarShuffle();
-                }}
-              >
-                <Shuffle className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            <AgentAvatar
+              seed={avatarSeed}
+              name={agent.name}
+              avatarUrl={agent.avatarUrl ?? null}
+              size={56}
+              isSelected={isSelected}
+            />
 
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-2">
