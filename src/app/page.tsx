@@ -4,15 +4,19 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AgentChatPanel } from "@/features/agents/components/AgentChatPanel";
 import { AgentCreateModal } from "@/features/agents/components/AgentCreateModal";
+import { AgentEditModal } from "@/features/agents/components/AgentEditModal";
 import {
   AgentBrainPanel,
   AgentSettingsPanel,
 } from "@/features/agents/components/AgentInspectPanels";
+import { FilesPanel } from "@/features/agents/components/FilesPanel";
 import { FleetSidebar } from "@/features/agents/components/FleetSidebar";
 import { HeaderBar } from "@/features/agents/components/HeaderBar";
+import { HomeScreen } from "@/features/agents/components/HomeScreen";
 import { ConnectionPanel } from "@/features/agents/components/ConnectionPanel";
 import { GatewayConnectScreen } from "@/features/agents/components/GatewayConnectScreen";
 import { EmptyStatePanel } from "@/features/agents/components/EmptyStatePanel";
+import { trackEvent } from "@/lib/analytics/tracker";
 import {
   isHeartbeatPrompt,
 } from "@/lib/text/message-extract";
@@ -289,6 +293,8 @@ const AgentStudioPage = () => {
   const [inspectSidebar, setInspectSidebar] = useState<InspectSidebarState>(null);
   const [personalityHasUnsavedChanges, setPersonalityHasUnsavedChanges] = useState(false);
   const [createAgentBlock, setCreateAgentBlock] = useState<CreateAgentBlockState | null>(null);
+  const [editModalAgentId, setEditModalAgentId] = useState<string | null>(null);
+  const [filesPanelOpen, setFilesPanelOpen] = useState(false);
   const [pendingExecApprovalsByAgentId, setPendingExecApprovalsByAgentId] = useState<
     Record<string, PendingExecApproval[]>
   >({});
@@ -1477,6 +1483,11 @@ const AgentStudioPage = () => {
         <HeaderBar
           status={gatewayStatus}
           onConnectionSettings={() => setShowConnectionPanel(true)}
+          onGoHome={() => {
+            dispatch({ type: "selectAgent", agentId: null });
+          }}
+          onOpenFilesPanel={() => setFilesPanelOpen(true)}
+          onOpenAnalytics={() => { window.location.href = "/analytics"; }}
         />
         <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-3 pt-2 sm:px-4 sm:pb-4 sm:pt-3 md:px-5 md:pb-5 md:pt-3">
           {connectionPanelVisible ? (
@@ -1704,6 +1715,7 @@ const AgentStudioPage = () => {
                   createDisabled={!gatewayConnected || createAgentBusy || state.loading}
                   createBusy={createAgentBusy}
                   onSelectAgent={handleFleetSelectAgent}
+                  onEditAgent={(agentId) => setEditModalAgentId(agentId)}
                 />
               </div>
               <div
@@ -1739,9 +1751,15 @@ const AgentStudioPage = () => {
                           handleThinkingTracesToggle(focusedAgent.agentId, enabled)
                         }
                         onDraftChange={(value) => handleDraftChange(focusedAgent.agentId, value)}
-                        onSend={(message) =>
-                          handleSend(focusedAgent.agentId, focusedAgent.sessionKey, message)
-                        }
+                        onSend={(message) => {
+                          handleSend(focusedAgent.agentId, focusedAgent.sessionKey, message);
+                          trackEvent({
+                            type: "message_sent",
+                            agentId: focusedAgent.agentId,
+                            agentName: focusedAgent.name,
+                            model: focusedAgent.model ?? undefined,
+                          });
+                        }}
                         onRemoveQueuedMessage={(index) =>
                           removeQueuedMessage(focusedAgent.agentId, index)
                         }
@@ -1757,21 +1775,20 @@ const AgentStudioPage = () => {
                         onResolveExecApproval={(id, decision) => {
                           void handleResolveExecApproval(id, decision);
                         }}
+                        onOpenFilesPanel={() => setFilesPanelOpen(true)}
                       />
                     </div>
                   </div>
                 ) : (
-                  <EmptyStatePanel
-                    title={hasAnyAgents ? "No agents match this filter." : "No agents available."}
-                    description={
-                      hasAnyAgents
-                        ? undefined
-                        : gatewayConnected
-                          ? "Use New Agent in the sidebar to add your first agent."
-                          : "Connect to your gateway to load agents into the studio."
-                    }
-                    fillHeight
-                    className="items-center p-6 text-center text-sm"
+                  <HomeScreen
+                    agents={agents}
+                    gatewayStatus={gatewayStatus}
+                    onSelectAgent={(agentId) => {
+                      dispatch({ type: "selectAgent", agentId });
+                      setMobilePane("chat");
+                    }}
+                    onCreateAgent={handleOpenCreateAgentModal}
+                    onOpenSettings={() => setShowConnectionPanel(true)}
                   />
                 )}
               </div>
@@ -1792,6 +1809,27 @@ const AgentStudioPage = () => {
           }}
           onSubmit={(payload) => {
             void handleCreateAgentSubmit(payload);
+          }}
+        />
+      ) : null}
+      <FilesPanel open={filesPanelOpen} onClose={() => setFilesPanelOpen(false)} />
+      {editModalAgentId ? (
+        <AgentEditModal
+          open={true}
+          agentId={editModalAgentId}
+          currentName={agents.find((a) => a.agentId === editModalAgentId)?.name ?? ""}
+          currentAvatarSeed={
+            agents.find((a) => a.agentId === editModalAgentId)?.avatarSeed ??
+            editModalAgentId
+          }
+          onClose={() => setEditModalAgentId(null)}
+          onSave={({ name, avatarSeed }) => {
+            const agent = agents.find((a) => a.agentId === editModalAgentId);
+            if (agent && name !== agent.name) {
+              void settingsMutationController.handleRenameAgent(editModalAgentId, name);
+            }
+            persistAvatarSeed(editModalAgentId, avatarSeed);
+            setEditModalAgentId(null);
           }}
         />
       ) : null}

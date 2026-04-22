@@ -14,7 +14,7 @@ import {
 import type { AgentState as AgentRecord } from "@/features/agents/state/store";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Check, ChevronRight, Clock, Cog, Maximize2, Pencil, Trash2, X } from "lucide-react";
+import { Check, ChevronRight, Clock, Cog, FileText, FolderOpen, Maximize2, Paperclip, Pencil, Trash2, X } from "lucide-react";
 import type { GatewayModelChoice } from "@/lib/gateway/models";
 import { rewriteMediaLinesToMarkdown } from "@/lib/text/media-markdown";
 import { normalizeAssistantDisplayText } from "@/lib/text/assistantText";
@@ -149,6 +149,7 @@ type AgentChatPanelProps = {
   onAvatarShuffle: () => void;
   pendingExecApprovals?: PendingExecApproval[];
   onResolveExecApproval?: (id: string, decision: ExecApprovalDecision) => void;
+  onOpenFilesPanel?: () => void;
 };
 
 const formatApprovalExpiry = (timestampMs: number): string => {
@@ -973,6 +974,8 @@ const InlineHoverTooltip = ({
   );
 };
 
+type AttachedFile = { name: string; content: string; mimeType: string };
+
 const AgentChatComposer = memo(function AgentChatComposer({
   value,
   onChange,
@@ -997,6 +1000,12 @@ const AgentChatComposer = memo(function AgentChatComposer({
   showThinkingTraces,
   onToolCallingToggle,
   onThinkingTracesToggle,
+  attachedFiles = [],
+  onAttachFile,
+  onRemoveAttachment,
+  mdPreview = false,
+  onMdPreviewToggle,
+  onOpenFilesPanel,
 }: {
   value: string;
   onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
@@ -1021,7 +1030,43 @@ const AgentChatComposer = memo(function AgentChatComposer({
   showThinkingTraces: boolean;
   onToolCallingToggle: (enabled: boolean) => void;
   onThinkingTracesToggle: (enabled: boolean) => void;
+  attachedFiles?: AttachedFile[];
+  onAttachFile?: (files: AttachedFile[]) => void;
+  onRemoveAttachment?: (index: number) => void;
+  mdPreview?: boolean;
+  onMdPreviewToggle?: () => void;
+  onOpenFilesPanel?: () => void;
 }) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileInputChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const selected = Array.from(e.target.files ?? []);
+      if (selected.length === 0) return;
+      const readers = selected.map(
+        (f) =>
+          new Promise<AttachedFile>((resolve) => {
+            const isText = f.type.startsWith("text/") || f.type.includes("json") || f.type === "";
+            const reader = new FileReader();
+            reader.onload = () => {
+              const raw = typeof reader.result === "string" ? reader.result : "";
+              resolve({
+                name: f.name,
+                content: isText ? raw : raw.split(",")[1] ?? raw,
+                mimeType: f.type || "application/octet-stream",
+              });
+            };
+            if (isText) reader.readAsText(f);
+            else reader.readAsDataURL(f);
+          })
+      );
+      Promise.all(readers).then((newFiles) => {
+        onAttachFile?.(newFiles);
+      });
+      e.target.value = "";
+    },
+    [onAttachFile]
+  );
   const stopReason = stopDisabledReason?.trim() ?? "";
   const stopDisabled = !canSend || stopBusy || Boolean(stopReason);
   const stopAriaLabel = stopReason ? `Stop unavailable: ${stopReason}` : "Stop";
@@ -1110,6 +1155,40 @@ const AgentChatComposer = memo(function AgentChatComposer({
           </button>
         </div>
       ) : null}
+      {/* hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="*/*"
+        className="sr-only"
+        onChange={handleFileInputChange}
+      />
+      {/* md preview */}
+      {mdPreview && value ? (
+        <div className="composer-md-preview agent-markdown mb-2">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
+        </div>
+      ) : null}
+      {/* attached file chips */}
+      {attachedFiles.length > 0 ? (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {attachedFiles.map((f, index) => (
+            <span key={`${f.name}-${index}`} className="attachment-chip">
+              <Paperclip className="h-3 w-3" />
+              <span className="max-w-[120px] truncate">{f.name}</span>
+              <button
+                type="button"
+                className="ml-0.5 text-white/40 hover:text-white/80"
+                onClick={() => onRemoveAttachment?.(index)}
+                aria-label={`Remove ${f.name}`}
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
       <div className="flex min-w-0 items-end gap-2">
         <textarea
           ref={inputRef}
@@ -1189,7 +1268,39 @@ const AgentChatComposer = memo(function AgentChatComposer({
             </InlineHoverTooltip>
           ) : null}
         </div>
-        <div className="flex w-full flex-wrap items-center justify-end gap-1.5 text-[10px] text-muted-foreground sm:ml-auto sm:w-auto sm:flex-nowrap">
+        <div className="composer-toolbar flex w-full flex-wrap items-center justify-end gap-1.5 text-[10px] text-muted-foreground sm:ml-auto sm:w-auto sm:flex-nowrap">
+          {/* attach file button */}
+          <button
+            type="button"
+            className={`ui-btn-icon ui-btn-icon-xs ${attachedFiles.length > 0 ? "text-foreground" : ""}`}
+            title="Attach file"
+            aria-label="Attach file"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Paperclip className="h-3.5 w-3.5" />
+          </button>
+          {/* md preview toggle */}
+          <button
+            type="button"
+            className={`ui-btn-icon ui-btn-icon-xs ${mdPreview ? "text-foreground bg-white/10" : ""}`}
+            title="Preview markdown"
+            aria-label="Toggle markdown preview"
+            onClick={onMdPreviewToggle}
+          >
+            <FileText className="h-3.5 w-3.5" />
+          </button>
+          {/* open files panel */}
+          {onOpenFilesPanel ? (
+            <button
+              type="button"
+              className="ui-btn-icon ui-btn-icon-xs"
+              title="File vault"
+              aria-label="Open file vault"
+              onClick={onOpenFilesPanel}
+            >
+              <FolderOpen className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
           <span className="font-mono tracking-[0.02em]">Show</span>
           <button
             type="button"
@@ -1247,9 +1358,12 @@ export const AgentChatPanel = ({
   onAvatarShuffle: _onAvatarShuffle,
   pendingExecApprovals = [],
   onResolveExecApproval,
+  onOpenFilesPanel,
 }: AgentChatPanelProps) => {
   const [draftValue, setDraftValue] = useState(agent.draft);
   const [newSessionBusy, setNewSessionBusy] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [mdPreview, setMdPreview] = useState(false);
   const [renameEditing, setRenameEditing] = useState(false);
   const [renameSaving, setRenameSaving] = useState(false);
   const [renameDraft, setRenameDraft] = useState(agent.name);
@@ -1364,14 +1478,23 @@ export const AgentChatPanel = ({
     (message: string) => {
       if (!canSend) return;
       const trimmed = message.trim();
-      if (!trimmed) return;
+      if (!trimmed && attachedFiles.length === 0) return;
+      let finalMessage = trimmed;
+      if (attachedFiles.length > 0) {
+        const attachmentBlock = `[Attached files]\n${attachedFiles
+          .map((f) => `**${f.name}**:\n\`\`\`\n${f.content}\n\`\`\``)
+          .join("\n\n")}\n\n`;
+        finalMessage = attachmentBlock + (trimmed || "");
+        setAttachedFiles([]);
+      }
+      if (!finalMessage.trim()) return;
       plainDraftRef.current = "";
       setDraftValue("");
       onDraftChange("");
       scrollToBottomNextOutputRef.current = true;
-      onSend(trimmed);
+      onSend(finalMessage);
     },
-    [canSend, onDraftChange, onSend]
+    [attachedFiles, canSend, onDraftChange, onSend]
   );
 
   const visibleTranscriptEntries = useMemo(
@@ -1484,7 +1607,7 @@ export const AgentChatPanel = ({
     () => resolveEmptyChatIntroMessage(agent.agentId, agent.sessionEpoch),
     [agent.agentId, agent.sessionEpoch]
   );
-  const sendDisabled = !canSend || !draftValue.trim();
+  const sendDisabled = !canSend || (!draftValue.trim() && attachedFiles.length === 0);
 
   const handleComposerChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -1772,6 +1895,14 @@ export const AgentChatPanel = ({
             showThinkingTraces={agent.showThinkingTraces}
             onToolCallingToggle={onToolCallingToggle}
             onThinkingTracesToggle={onThinkingTracesToggle}
+            attachedFiles={attachedFiles}
+            onAttachFile={(files) => setAttachedFiles((prev) => [...prev, ...files])}
+            onRemoveAttachment={(index) =>
+              setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
+            }
+            mdPreview={mdPreview}
+            onMdPreviewToggle={() => setMdPreview((v) => !v)}
+            onOpenFilesPanel={onOpenFilesPanel}
           />
         </div>
       </div>

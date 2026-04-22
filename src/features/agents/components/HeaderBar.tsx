@@ -1,18 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import type { GatewayStatus } from "@/lib/gateway/gateway-status";
-import { Plug, Zap } from "lucide-react";
+import { BarChart2, FolderOpen, Home, Plug, Zap } from "lucide-react";
 import { resolveGatewayStatusBadgeClass, resolveGatewayStatusLabel } from "./colorSemantics";
 
 type HeaderBarProps = {
   status: GatewayStatus;
   onConnectionSettings: () => void;
   showConnectionSettings?: boolean;
+  onGoHome?: () => void;
+  onOpenAnalytics?: () => void;
+  onOpenFilesPanel?: () => void;
 };
 
 export const HeaderBar = ({
   status,
   onConnectionSettings,
   showConnectionSettings = true,
+  onGoHome,
+  onOpenAnalytics,
+  onOpenFilesPanel,
 }: HeaderBarProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -58,6 +64,40 @@ export const HeaderBar = ({
 
       {/* right: status + actions */}
       <div className="flex items-center gap-1.5">
+        {/* nav buttons */}
+        {onGoHome ? (
+          <button
+            type="button"
+            className="ui-btn-icon ui-btn-icon-xs"
+            onClick={onGoHome}
+            title="Home"
+            aria-label="Go home"
+          >
+            <Home className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
+        {onOpenFilesPanel ? (
+          <button
+            type="button"
+            className="ui-btn-icon ui-btn-icon-xs"
+            onClick={onOpenFilesPanel}
+            title="File vault"
+            aria-label="Open file vault"
+          >
+            <FolderOpen className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
+        {onOpenAnalytics ? (
+          <button
+            type="button"
+            className="ui-btn-icon ui-btn-icon-xs"
+            onClick={onOpenAnalytics}
+            title="Analytics"
+            aria-label="Open analytics"
+          >
+            <BarChart2 className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
         {/* gateway status pill */}
         <span
           className={`ui-chip px-2.5 py-0.5 font-mono text-[10px] font-semibold tracking-[0.08em] ${resolveGatewayStatusBadgeClass(status)}`}

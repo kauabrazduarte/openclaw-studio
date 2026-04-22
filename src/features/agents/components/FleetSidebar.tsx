@@ -7,7 +7,7 @@ import {
   resolveAgentStatusLabel,
 } from "./colorSemantics";
 import { EmptyStatePanel } from "./EmptyStatePanel";
-import { Plus, Search, Activity, Clock } from "lucide-react";
+import { Pencil, Plus, Search, Activity, Clock } from "lucide-react";
 
 type FleetSidebarProps = {
   agents: AgentState[];
@@ -18,6 +18,7 @@ type FleetSidebarProps = {
   onCreateAgent: () => void;
   createDisabled?: boolean;
   createBusy?: boolean;
+  onEditAgent?: (agentId: string) => void;
 };
 
 const FILTER_OPTIONS: Array<{ value: FocusFilter; label: string; testId: string }> = [
@@ -35,6 +36,7 @@ export const FleetSidebar = ({
   onCreateAgent,
   createDisabled = false,
   createBusy = false,
+  onEditAgent,
 }: FleetSidebarProps) => {
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const previousTopByAgentIdRef = useRef<Map<string, number>>(new Map());
@@ -247,6 +249,20 @@ export const FleetSidebar = ({
                       ) : null}
                     </div>
                   </div>
+                  {onEditAgent ? (
+                    <button
+                      type="button"
+                      className="ui-btn-icon ui-btn-icon-xs shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                      aria-label={`Edit ${agent.name}`}
+                      title="Edit agent"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditAgent(agent.agentId);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  ) : null}
                 </button>
               );
             })}
