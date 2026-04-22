@@ -1487,7 +1487,7 @@ const AgentStudioPage = () => {
             dispatch({ type: "selectAgent", agentId: null });
           }}
           onOpenFilesPanel={() => setFilesPanelOpen(true)}
-          onOpenAnalytics={() => { window.location.href = "/analytics"; }}
+          onOpenAnalytics={() => { window.location.href = "/studio/analytics"; }}
         />
         <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-3 pt-2 sm:px-4 sm:pb-4 sm:pt-3 md:px-5 md:pb-5 md:pt-3">
           {connectionPanelVisible ? (
