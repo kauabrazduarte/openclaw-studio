@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, Copy, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, Loader2, Plug, Server, Monitor, Cloud } from "lucide-react";
 import type { GatewayStatus } from "@/lib/gateway/gateway-status";
 import {
   isStudioLikelyRemote,
@@ -50,6 +50,32 @@ const resolveLocalGatewayPort = (gatewayUrl: string): number => {
   return 18789;
 };
 
+const SCENARIO_ITEMS: Array<{
+  value: StudioSetupScenario;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+}> = [
+  {
+    value: "same-computer",
+    icon: Monitor,
+    title: "Same machine",
+    description: "Studio and OpenClaw both run locally.",
+  },
+  {
+    value: "remote-gateway",
+    icon: Cloud,
+    title: "Remote gateway",
+    description: "Studio on your laptop, OpenClaw in the cloud.",
+  },
+  {
+    value: "same-cloud-host",
+    icon: Server,
+    title: "Shared cloud host",
+    description: "Both run on the same remote machine.",
+  },
+];
+
 export const GatewayConnectScreen = ({
   savedGatewayUrl,
   draftGatewayUrl,
@@ -93,18 +119,16 @@ export const GatewayConnectScreen = ({
     () => resolveLocalGatewayPort(draftGatewayUrl || savedGatewayUrl),
     [draftGatewayUrl, savedGatewayUrl]
   );
-  const localGatewayCommand = useMemo(
-    () => `openclaw gateway --port ${localPort}`,
-    [localPort]
-  );
+  const localGatewayCommand = useMemo(() => `openclaw gateway --port ${localPort}`, [localPort]);
   const gatewayServeCommand = useMemo(
     () => `tailscale serve --yes --bg --https 443 http://127.0.0.1:${localPort}`,
     [localPort]
   );
   const studioServeCommand = "tailscale serve --yes --bg --https 443 http://127.0.0.1:3000";
-  const studioOpenUrl = installContext.tailscale.loggedIn && installContext.tailscale.dnsName
-    ? `https://${installContext.tailscale.dnsName}`
-    : "https://<studio-host>.ts.net";
+  const studioOpenUrl =
+    installContext.tailscale.loggedIn && installContext.tailscale.dnsName
+      ? `https://${installContext.tailscale.dnsName}`
+      : "https://<studio-host>.ts.net";
   const studioSshTarget =
     installContext.tailscale.dnsName ||
     installContext.studioHost.publicHosts[0] ||
@@ -120,64 +144,32 @@ export const GatewayConnectScreen = ({
         hasStoredToken,
         hasLocalGatewayToken: localGatewayDefaultsHasToken,
       }),
-    [
-      draftGatewayUrl,
-      hasStoredToken,
-      installContext,
-      localGatewayDefaultsHasToken,
-      selectedScenario,
-    ]
+    [draftGatewayUrl, hasStoredToken, installContext, localGatewayDefaultsHasToken, selectedScenario]
   );
   const studioCliUpdateWarning = useMemo(() => {
     const studioCli = installContext.studioCli;
     if (!studioCli.installed || !studioCli.updateAvailable) return null;
     const current = studioCli.currentVersion?.trim() || "current";
     const latest = studioCli.latestVersion?.trim() || "latest";
-    return `openclaw-studio CLI ${current} is installed on this host, but ${latest} is available. Run npx -y openclaw-studio@latest to update.`;
+    return `openclaw-studio CLI ${current} is installed, but ${latest} is available. Run npx -y openclaw-studio@latest to update.`;
   }, [installContext]);
+
   const statusCopy = useMemo(() => {
-    if (status === "connected") {
-      return "Studio is connected to OpenClaw.";
-    }
-    if (status === "connecting") {
-      return "Studio is connecting to OpenClaw…";
-    }
-    if (status === "reconnecting") {
-      return "Studio lost the gateway connection and is retrying…";
-    }
-    if (status === "error") {
-      return "Studio could not connect to the saved gateway settings.";
-    }
-    return "Choose how this Studio should reach OpenClaw.";
+    if (status === "connected") return "Connected to OpenClaw gateway.";
+    if (status === "connecting") return "Connecting to OpenClaw…";
+    if (status === "reconnecting") return "Reconnecting to gateway…";
+    if (status === "error") return "Could not connect to the saved gateway settings.";
+    return "Configure Studio to reach your OpenClaw gateway.";
   }, [status]);
-  const statusSubcopy = useMemo(() => {
-    const normalizedReason = statusReason?.trim() ?? "";
-    if (normalizedReason === "gateway_closed") {
-      return "The gateway socket closed. Studio will keep retrying until it reconnects.";
-    }
-    if (normalizedReason) return normalizedReason;
-    if (selectedScenario === "same-cloud-host") {
-      return "Separate the two links: how you open Studio, and how Studio reaches OpenClaw.";
-    }
-    if (selectedScenario === "remote-gateway") {
-      return "On your laptop, Studio stays local. Only the upstream gateway needs to be remote.";
-    }
-    return "When Studio and OpenClaw share a host, the upstream should usually stay on localhost.";
-  }, [selectedScenario, statusReason]);
+
   const actionBusy = saving || testing || disconnecting;
-  const saveLabel = saving ? "Saving…" : "Save settings";
-  const testLabel = testing ? "Testing…" : "Test connection";
+  const saveLabel = saving ? "Saving…" : "Save";
+  const testLabel = testing ? "Testing…" : "Test";
   const disconnectLabel = disconnecting ? "Disconnecting…" : "Disconnect";
-  const statusDotClass =
-    status === "connected"
-      ? "ui-dot-status-connected"
-      : status === "connecting" || status === "reconnecting"
-        ? "ui-dot-status-connecting"
-        : "ui-dot-status-disconnected";
   const tokenHelper = hasStoredToken
-    ? "A token is already stored on this Studio host. Leave this blank to keep it."
+    ? "A token is stored on this host. Leave blank to keep it."
     : localGatewayDefaultsHasToken
-      ? "A local OpenClaw token is available on this host. Leave this blank to use it."
+      ? "A local OpenClaw token was detected. Leave blank to use it."
       : "Enter the gateway token Studio should use.";
   const remoteStudio = isStudioLikelyRemote(installContext);
 
@@ -201,287 +193,213 @@ export const GatewayConnectScreen = ({
     }
   };
 
-  const commandField = (params: {
-    value: string;
-    label: string;
-    helper?: string;
-  }) => (
+  const commandField = (params: { value: string; label: string; helper?: string }) => (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
+        <span className="font-mono text-[10px] font-semibold tracking-[0.07em] text-white/30 uppercase">
           {params.label}
-        </p>
+        </span>
         <button
           type="button"
-          className="ui-btn-ghost h-7 px-2 text-[11px]"
+          className="font-mono text-[10px] text-white/30 hover:text-white/60 transition-colors"
           onClick={() => void copyCommand(params.value)}
         >
-          {copyStatus === "copied" ? "Copied" : copyStatus === "failed" ? "Copy failed" : "Copy"}
+          {copyStatus === "copied" ? "Copied!" : copyStatus === "failed" ? "Failed" : "Copy"}
         </button>
       </div>
-      <div className="ui-command-surface flex items-center gap-2 rounded-md px-3 py-2">
+      <div className="ui-command-surface flex items-center gap-2 rounded px-3 py-2">
         <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[12px]">
           {params.value}
         </code>
         <button
           type="button"
-          className="ui-btn-icon ui-command-copy h-7 w-7 shrink-0"
+          className="ui-command-copy flex h-6 w-6 shrink-0 items-center justify-center rounded"
           onClick={() => void copyCommand(params.value)}
           aria-label={`Copy ${params.label}`}
-          title="Copy command"
         >
-          {copyStatus === "copied" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          {copyStatus === "copied" ? (
+            <Check className="h-3 w-3" />
+          ) : (
+            <Copy className="h-3 w-3" />
+          )}
         </button>
       </div>
       {params.helper ? (
-        <p className="text-xs leading-snug text-muted-foreground">{params.helper}</p>
+        <p className="text-[11px] leading-snug text-white/30">{params.helper}</p>
       ) : null}
     </div>
   );
 
-  const scenarioButtonClass = (scenario: StudioSetupScenario): string => {
-    return `ui-card rounded-xl px-4 py-3 text-left transition ${
-      selectedScenario === scenario
-        ? "ui-card-selected border-primary/60"
-        : "border border-border/70 hover:border-border"
-    }`;
-  };
-
-  const connectionForm = (
-    <div className="ui-card px-4 py-4 sm:px-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
-            Studio to OpenClaw
-          </p>
-          <p className="mt-1 text-sm text-foreground/85">
-            Save a gateway URL and token for this Studio host.
-          </p>
+  return (
+    <div className="mx-auto flex w-full max-w-[800px] flex-1 flex-col gap-4 px-2 pb-4">
+      {/* status banner */}
+      <div
+        className="flex items-center gap-3 rounded-lg border px-4 py-3"
+        style={{ borderColor: "#1e1e1e", background: "#0a0a0a" }}
+      >
+        {status === "connecting" || status === "reconnecting" ? (
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-amber-400" />
+        ) : (
+          <Plug
+            className={`h-4 w-4 shrink-0 ${
+              status === "connected" ? "text-emerald-400" : "text-white/25"
+            }`}
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-white/80">{statusCopy}</p>
+          {statusReason && (
+            <p className="mt-0.5 text-xs text-white/35">
+              {statusReason === "gateway_closed"
+                ? "The gateway socket closed. Studio will keep retrying."
+                : statusReason}
+            </p>
+          )}
         </div>
         <span
-          className={`ui-chip inline-flex items-center px-3 py-1 font-mono text-[10px] font-semibold tracking-[0.08em] ${resolveGatewayStatusBadgeClass(status)}`}
+          className={`ui-chip shrink-0 px-2.5 py-0.5 font-mono text-[10px] font-semibold tracking-[0.07em] ${resolveGatewayStatusBadgeClass(status)}`}
           data-status={status}
         >
           {resolveGatewayStatusLabel(status)}
         </span>
       </div>
 
-      <div className="mt-4 grid gap-3 lg:grid-cols-[1.35fr_1fr]">
-        <label className="flex flex-col gap-1 text-[11px] font-medium text-foreground/80">
-          Upstream URL
-          <input
-            className="ui-input h-10 rounded-md px-4 font-sans text-sm text-foreground outline-none"
-            type="text"
-            value={draftGatewayUrl}
-            onChange={(event) => onGatewayUrlChange(event.target.value)}
-            placeholder={
-              selectedScenario === "remote-gateway"
-                ? "wss://your-gateway.ts.net"
-                : `ws://localhost:${localPort}`
-            }
-            spellCheck={false}
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-[11px] font-medium text-foreground/80">
-          Upstream token
-          <div className="relative">
-            <input
-              className="ui-input h-10 w-full rounded-md px-4 pr-10 font-sans text-sm text-foreground outline-none"
-              type={showToken ? "text" : "password"}
-              value={token}
-              onChange={(event) => onTokenChange(event.target.value)}
-              placeholder={hasStoredToken || localGatewayDefaultsHasToken ? "keep existing token" : "gateway token"}
-              spellCheck={false}
-            />
+      {/* scenario picker */}
+      <div className="grid gap-2 sm:grid-cols-3">
+        {SCENARIO_ITEMS.map(({ value, icon: Icon, title, description }) => {
+          const active = selectedScenario === value;
+          return (
             <button
+              key={value}
               type="button"
-              className="ui-btn-icon absolute inset-y-0 right-1 my-auto h-8 w-8 border-transparent bg-transparent text-muted-foreground hover:bg-transparent hover:text-foreground"
-              aria-label={showToken ? "Hide token" : "Show token"}
-              onClick={() => setShowToken((prev) => !prev)}
+              className={`rounded-lg border px-3 py-3 text-left transition-all duration-150 ${
+                active
+                  ? "border-white/20 bg-white/6"
+                  : "border-white/6 bg-white/2 hover:border-white/12 hover:bg-white/4"
+              }`}
+              style={active ? { background: "rgba(255,255,255,0.05)" } : { background: "rgba(255,255,255,0.015)" }}
+              onClick={() => setScenario(value)}
             >
-              {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <div className="mb-2 flex items-center gap-2">
+                <Icon
+                  className={`h-4 w-4 ${active ? "text-white/70" : "text-white/30"}`}
+                />
+                <span
+                  className={`text-xs font-semibold tracking-wide ${
+                    active ? "text-white/80" : "text-white/40"
+                  }`}
+                >
+                  {title}
+                </span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-white/30">{description}</p>
             </button>
-          </div>
-        </label>
+          );
+        })}
       </div>
 
-      <p className="mt-2 text-xs leading-snug text-muted-foreground">{tokenHelper}</p>
-
-      {hasUnsavedChanges ? (
-        <p className="mt-2 font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
-          Unsaved changes
-        </p>
-      ) : null}
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="ui-btn-primary h-10 px-4 text-xs font-semibold tracking-[0.05em] disabled:cursor-not-allowed disabled:opacity-60"
-          onClick={() => void onSaveSettings()}
-          disabled={actionBusy || !draftGatewayUrl.trim()}
+      {/* setup guides */}
+      <div className="grid gap-3 xl:grid-cols-2">
+        <div
+          className="rounded-lg border p-4 space-y-3"
+          style={{ borderColor: "#1a1a1a", background: "#0c0c0c" }}
         >
-          {saveLabel}
-        </button>
-        <button
-          type="button"
-          className="ui-btn-secondary h-10 px-4 text-xs font-semibold tracking-[0.05em] text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-          onClick={() => void onTestConnection()}
-          disabled={actionBusy || !draftGatewayUrl.trim()}
-        >
-          {testLabel}
-        </button>
-        {status === "connected" ? (
-          <button
-            type="button"
-            className="ui-btn-ghost h-10 px-4 text-xs font-semibold tracking-[0.05em] text-foreground"
-            onClick={() => void onDisconnect()}
-            disabled={actionBusy}
-          >
-            {disconnectLabel}
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
-  return (
-    <div className="mx-auto flex w-full max-w-[820px] flex-1 flex-col gap-5 pb-4">
-      <div className="ui-card px-4 py-2">
-        <div className="flex items-start gap-3">
-          {status === "connecting" || status === "reconnecting" ? (
-            <Loader2 className="h-4 w-4 animate-spin text-[color:var(--status-connecting-fg)]" />
-          ) : (
-            <span className={`mt-1 h-2.5 w-2.5 ${statusDotClass}`} />
-          )}
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">{statusCopy}</p>
-            <p className="text-sm text-muted-foreground">{statusSubcopy}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <button type="button" className={scenarioButtonClass("same-computer")} onClick={() => setScenario("same-computer")}>
-          <p className="font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
-            Everything on this computer
-          </p>
-          <p className="mt-2 text-sm text-foreground/85">
-            Studio and OpenClaw both run on the same machine.
-          </p>
-        </button>
-        <button type="button" className={scenarioButtonClass("remote-gateway")} onClick={() => setScenario("remote-gateway")}>
-          <p className="font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
-            Studio here, OpenClaw in the cloud
-          </p>
-          <p className="mt-2 text-sm text-foreground/85">
-            Keep Studio on your laptop and point it at a remote gateway.
-          </p>
-        </button>
-        <button type="button" className={scenarioButtonClass("same-cloud-host")} onClick={() => setScenario("same-cloud-host")}>
-          <p className="font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
-            Studio and OpenClaw on the same cloud machine
-          </p>
-          <p className="mt-2 text-sm text-foreground/85">
-            Use localhost for the upstream, then solve how you open Studio.
-          </p>
-        </button>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <div className="ui-card px-4 py-4 sm:px-5">
-          <p className="font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
+          <p className="font-mono text-[10px] font-semibold tracking-[0.08em] text-white/30 uppercase">
             How you open Studio
           </p>
           {selectedScenario === "same-computer" || selectedScenario === "remote-gateway" ? (
-            <div className="mt-3 space-y-3">
-              <p className="text-sm text-foreground/85">
-                Open <span className="font-mono">http://localhost:3000</span> on this computer.
+            <div className="space-y-2">
+              <p className="text-xs text-white/50">
+                Open{" "}
+                <code className="font-mono text-white/70">http://localhost:3000</code> on this
+                machine.
               </p>
-              <p className="text-xs leading-snug text-muted-foreground">
-                Only the OpenClaw upstream changes in this setup. Studio itself stays local.
+              <p className="text-[11px] text-white/25">
+                Only the OpenClaw upstream changes in this setup.
               </p>
             </div>
           ) : (
-            <div className="mt-3 space-y-3">
-              <p className="text-sm text-foreground/85">
-                Studio is on a remote host. <span className="font-mono">http://localhost:3000</span> only opens on that machine.
+            <div className="space-y-3">
+              <p className="text-xs text-white/50">
+                Studio is on a remote host.{" "}
+                <code className="font-mono text-white/70">localhost:3000</code> only opens there.
               </p>
               {commandField({
                 value: studioServeCommand,
-                label: "Recommended: Tailscale Serve",
-                helper: `Then open ${studioOpenUrl} from your laptop or phone.`,
+                label: "Tailscale Serve (recommended)",
+                helper: `Then open ${studioOpenUrl} from your browser.`,
               })}
               {commandField({
                 value: studioTunnelCommand,
-                label: "Fallback: SSH tunnel",
-                helper: "Use this if Tailscale is not available yet.",
+                label: "SSH tunnel (fallback)",
               })}
               {remoteStudio && installContext.tailscale.loggedIn === false ? (
-                <div className="ui-card rounded-md px-3 py-3 text-sm text-muted-foreground">
-                  Tailscale was not detected on this Studio host. Beginners will usually have a much easier time with Tailscale Serve than with public binds.
-                </div>
+                <p className="text-[11px] text-white/30">
+                  Tailscale not detected. Tailscale Serve is usually easier than public binds.
+                </p>
               ) : null}
               {installContext.studioHost.publicHosts.length > 0 ? (
-                <div className="ui-card rounded-md px-3 py-3 text-sm text-muted-foreground">
-                  This Studio is already bound beyond loopback. If you keep it public, <span className="font-mono">STUDIO_ACCESS_TOKEN</span> is required and each browser must open <span className="font-mono">/?access_token=...</span> once.
-                </div>
+                <p className="text-[11px] text-white/30">
+                  Studio is bound beyond loopback.{" "}
+                  <code className="font-mono">STUDIO_ACCESS_TOKEN</code> is required.
+                </p>
               ) : null}
             </div>
           )}
         </div>
 
-        <div className="ui-card px-4 py-4 sm:px-5">
-          <p className="font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
+        <div
+          className="rounded-lg border p-4 space-y-3"
+          style={{ borderColor: "#1a1a1a", background: "#0c0c0c" }}
+        >
+          <p className="font-mono text-[10px] font-semibold tracking-[0.08em] text-white/30 uppercase">
             How Studio reaches OpenClaw
           </p>
           {selectedScenario === "remote-gateway" ? (
-            <div className="mt-3 space-y-3">
-              <p className="text-sm text-foreground/85">
-                Recommended: keep the remote gateway on loopback and expose it with Tailscale Serve.
+            <div className="space-y-3">
+              <p className="text-xs text-white/50">
+                Keep the remote gateway on loopback and expose it with Tailscale Serve.
               </p>
               {commandField({
                 value: gatewayServeCommand,
                 label: "On the gateway host",
-                helper: "In Studio, use wss://<gateway-host>.ts.net plus your gateway token.",
+                helper: `In Studio, use wss://<gateway>.ts.net + your token.`,
               })}
               {commandField({
                 value: gatewayTunnelCommand,
-                label: "Fallback: SSH tunnel",
-                helper: `Then point Studio to ws://localhost:${localPort}.`,
+                label: "SSH tunnel (fallback)",
+                helper: `Point Studio at ws://localhost:${localPort}.`,
               })}
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="ui-btn-secondary h-9 px-3 text-xs font-semibold tracking-[0.05em] text-foreground"
-                  onClick={applyLoopbackUrl}
-                >
-                  Use SSH tunnel URL
-                </button>
-              </div>
+              <button
+                type="button"
+                className="ui-btn-secondary h-8 px-3 text-xs"
+                onClick={applyLoopbackUrl}
+              >
+                Use SSH tunnel URL
+              </button>
             </div>
           ) : (
-            <div className="mt-3 space-y-3">
-              <p className="text-sm text-foreground/85">
-                Keep the upstream local to the Studio host:{" "}
-                <span className="font-mono">{`ws://localhost:${localPort}`}</span>.
+            <div className="space-y-3">
+              <p className="text-xs text-white/50">
+                Keep upstream local:{" "}
+                <code className="font-mono text-white/70">{`ws://localhost:${localPort}`}</code>
               </p>
               {commandField({
                 value: localGatewayCommand,
                 label: "Start OpenClaw on this host",
-                helper: "Use the same machine for both processes, even if that machine is a cloud VM.",
               })}
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="ui-btn-secondary h-9 px-3 text-xs font-semibold tracking-[0.05em] text-foreground"
+                  className="ui-btn-secondary h-8 px-3 text-xs"
                   onClick={applyLoopbackUrl}
                 >
-                  Use localhost upstream
+                  Use localhost
                 </button>
                 {localGatewayDefaults ? (
                   <button
                     type="button"
-                    className="ui-btn-secondary h-9 px-3 text-xs font-semibold tracking-[0.05em] text-foreground"
+                    className="ui-btn-secondary h-8 px-3 text-xs"
                     onClick={onUseLocalDefaults}
                   >
                     Use local defaults
@@ -489,21 +407,20 @@ export const GatewayConnectScreen = ({
                 ) : null}
               </div>
               {localGatewayDefaults ? (
-                <div className="ui-card rounded-md px-3 py-3 text-sm text-muted-foreground">
-                  Local OpenClaw settings were detected at <span className="font-mono">~/.openclaw/openclaw.json</span>. Studio can reuse that local URL and token.
-                </div>
+                <p className="text-[11px] text-white/30">
+                  Local OpenClaw settings detected at{" "}
+                  <code className="font-mono">~/.openclaw/openclaw.json</code>.
+                </p>
               ) : null}
             </div>
           )}
         </div>
       </div>
 
+      {/* warnings */}
       {studioCliUpdateWarning ? (
-        <div className="ui-alert-danger rounded-md px-4 py-2 text-sm">
-          {studioCliUpdateWarning}
-        </div>
+        <div className="ui-alert-danger px-4 py-2.5 text-xs">{studioCliUpdateWarning}</div>
       ) : null}
-
       {warnings.length > 0 ? (
         <div className="space-y-2">
           {warnings.map((warning) => (
@@ -511,8 +428,8 @@ export const GatewayConnectScreen = ({
               key={warning.id}
               className={
                 warning.tone === "warn"
-                  ? "ui-alert-danger rounded-md px-4 py-2 text-sm"
-                  : "ui-card rounded-md px-4 py-2 text-sm text-muted-foreground"
+                  ? "ui-alert-danger px-4 py-2.5 text-xs"
+                  : "rounded-lg border border-white/6 px-4 py-2.5 text-xs text-white/40"
               }
             >
               {warning.message}
@@ -521,21 +438,117 @@ export const GatewayConnectScreen = ({
         </div>
       ) : null}
 
-      {connectionForm}
+      {/* connection form */}
+      <div
+        className="rounded-lg border p-4"
+        style={{ borderColor: "#1a1a1a", background: "#0c0c0c" }}
+      >
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-mono text-[10px] font-semibold tracking-[0.08em] text-white/30 uppercase">
+              Connection settings
+            </p>
+            <p className="mt-0.5 text-xs text-white/45">Gateway URL and access token.</p>
+          </div>
+          {hasUnsavedChanges && (
+            <span className="font-mono text-[10px] text-amber-400/70">Unsaved changes</span>
+          )}
+        </div>
 
+        <div className="grid gap-3 sm:grid-cols-[1.4fr_1fr]">
+          <label className="flex flex-col gap-1.5">
+            <span className="font-mono text-[10px] font-semibold tracking-[0.06em] text-white/35 uppercase">
+              Upstream URL
+            </span>
+            <input
+              className="ui-input h-9 rounded px-3 font-mono text-[13px] outline-none"
+              type="text"
+              value={draftGatewayUrl}
+              onChange={(event) => onGatewayUrlChange(event.target.value)}
+              placeholder={
+                selectedScenario === "remote-gateway"
+                  ? "wss://your-gateway.ts.net"
+                  : `ws://localhost:${localPort}`
+              }
+              spellCheck={false}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="font-mono text-[10px] font-semibold tracking-[0.06em] text-white/35 uppercase">
+              Token
+            </span>
+            <div className="relative">
+              <input
+                className="ui-input h-9 w-full rounded px-3 pr-9 font-mono text-[13px] outline-none"
+                type={showToken ? "text" : "password"}
+                value={token}
+                onChange={(event) => onTokenChange(event.target.value)}
+                placeholder={
+                  hasStoredToken || localGatewayDefaultsHasToken
+                    ? "keep existing"
+                    : "gateway token"
+                }
+                spellCheck={false}
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-1 my-auto flex h-7 w-7 items-center justify-center rounded text-white/30 hover:text-white/60"
+                aria-label={showToken ? "Hide token" : "Show token"}
+                onClick={() => setShowToken((prev) => !prev)}
+              >
+                {showToken ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+          </label>
+        </div>
+
+        <p className="mt-2 text-[11px] text-white/30">{tokenHelper}</p>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="ui-btn-primary h-9 px-4 text-xs font-semibold tracking-wide disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={() => void onSaveSettings()}
+            disabled={actionBusy || !draftGatewayUrl.trim()}
+          >
+            {saveLabel}
+          </button>
+          <button
+            type="button"
+            className="ui-btn-secondary h-9 px-4 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={() => void onTestConnection()}
+            disabled={actionBusy || !draftGatewayUrl.trim()}
+          >
+            {testLabel}
+          </button>
+          {status === "connected" ? (
+            <button
+              type="button"
+              className="ui-btn-ghost h-9 px-4 text-xs"
+              onClick={() => void onDisconnect()}
+              disabled={actionBusy}
+            >
+              {disconnectLabel}
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {/* test result */}
       {testResult ? (
         <div
           className={
             testResult.kind === "error"
-              ? "ui-alert-danger rounded-md px-4 py-2 text-sm"
-              : "ui-card rounded-md px-4 py-2 text-sm text-muted-foreground"
+              ? "ui-alert-danger px-4 py-2.5 text-xs"
+              : "rounded-lg border border-white/6 px-4 py-2.5 text-xs text-white/50"
           }
         >
           {testResult.message}
         </div>
       ) : null}
 
-      {error ? <p className="ui-text-danger text-sm leading-snug">{error}</p> : null}
+      {error ? <p className="ui-text-danger text-xs">{error}</p> : null}
     </div>
   );
 };

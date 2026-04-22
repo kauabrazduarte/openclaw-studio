@@ -1,5 +1,5 @@
 import type { AgentState, FocusFilter } from "@/features/agents/state/store";
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AgentAvatar } from "./AgentAvatar";
 import {
   NEEDS_APPROVAL_BADGE_CLASS,
@@ -7,6 +7,7 @@ import {
   resolveAgentStatusLabel,
 } from "./colorSemantics";
 import { EmptyStatePanel } from "./EmptyStatePanel";
+import { Plus, Search, Activity, Clock } from "lucide-react";
 
 type FleetSidebarProps = {
   agents: AgentState[];
@@ -38,6 +39,7 @@ export const FleetSidebar = ({
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const previousTopByAgentIdRef = useRef<Map<string, number>>(new Map());
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const agentOrderKey = useMemo(() => agents.map((agent) => agent.agentId).join("|"), [agents]);
 
@@ -63,31 +65,90 @@ export const FleetSidebar = ({
       if (typeof node.animate !== "function") continue;
       node.animate(
         [{ transform: `translateY(${deltaY}px)` }, { transform: "translateY(0px)" }],
-        { duration: 300, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
+        { duration: 260, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
       );
     }
     previousTopByAgentIdRef.current = nextTopByAgentId;
   }, [agentOrderKey]);
 
+  const runningCount = useMemo(
+    () => agents.filter((a) => a.status === "running").length,
+    [agents]
+  );
+  const approvalCount = useMemo(
+    () => agents.filter((a) => a.awaitingUserInput).length,
+    [agents]
+  );
+
+  const filteredAgents = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return agents;
+    return agents.filter((a) => a.name.toLowerCase().includes(q));
+  }, [agents, searchQuery]);
+
   return (
     <aside
-      className="glass-panel fade-up-delay ui-panel ui-depth-sidepanel relative flex h-full w-full min-w-72 flex-col gap-3 bg-sidebar p-3 xl:max-w-[320px] xl:border-r xl:border-sidebar-border"
+      className="fade-up-delay relative flex h-full w-full min-w-64 flex-col bg-sidebar xl:max-w-[300px] xl:border-r xl:border-sidebar-border"
       data-testid="fleet-sidebar"
+      style={{ borderRight: "1px solid #141414" }}
     >
-      <div className="flex items-center justify-between gap-2 px-1">
-        <p className="console-title type-page-title text-foreground">Agents ({agents.length})</p>
+      {/* header */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[11px] font-semibold tracking-[0.08em] text-white/40 uppercase">
+            Agents
+          </span>
+          <span className="font-mono text-[11px] text-white/25">{agents.length}</span>
+        </div>
         <button
           type="button"
           data-testid="fleet-new-agent-button"
-          className="ui-btn-primary px-3 py-2 font-mono text-[12px] font-medium tracking-[0.02em] disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground"
+          className="ui-btn-icon ui-btn-icon-xs border border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/90 transition-colors"
           onClick={onCreateAgent}
           disabled={createDisabled || createBusy}
+          title="New agent"
         >
-          {createBusy ? "Creating..." : "New agent"}
+          <Plus className="h-3.5 w-3.5" />
+          <span className="sr-only">{createBusy ? "Creating..." : "New agent"}</span>
         </button>
       </div>
 
-      <div className="ui-segment ui-segment-fleet-filter grid-cols-3">
+      {/* stat chips */}
+      {(runningCount > 0 || approvalCount > 0) && (
+        <div className="flex items-center gap-1.5 px-4 pb-2">
+          {runningCount > 0 && (
+            <span className="agent-stat-chip agent-stat-chip--running">
+              <Activity className="h-2.5 w-2.5" />
+              {runningCount} running
+            </span>
+          )}
+          {approvalCount > 0 && (
+            <span className="agent-stat-chip agent-stat-chip--approval">
+              <Clock className="h-2.5 w-2.5" />
+              {approvalCount} pending
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* search */}
+      <div className="relative px-3 pb-2">
+        <Search
+          className="absolute left-5.5 top-1/2 h-3 w-3 -translate-y-1/2 text-white/20 pointer-events-none"
+          style={{ left: "22px" }}
+        />
+        <input
+          type="text"
+          placeholder="Search agents..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="sidebar-search-input"
+          spellCheck={false}
+        />
+      </div>
+
+      {/* filter pills */}
+      <div className="flex items-center gap-1 px-3 pb-2">
         {FILTER_OPTIONS.map((option) => {
           const active = filter === option.value;
           return (
@@ -96,8 +157,11 @@ export const FleetSidebar = ({
               type="button"
               data-testid={option.testId}
               aria-pressed={active}
-              className="ui-segment-item px-2 py-1 font-mono text-[12px] font-medium tracking-[0.02em]"
-              data-active={active ? "true" : "false"}
+              className={`rounded-md px-2.5 py-1 font-mono text-[11px] font-medium tracking-[0.04em] transition-colors ${
+                active
+                  ? "bg-white/10 text-white/80"
+                  : "text-white/30 hover:text-white/60 hover:bg-white/5"
+              }`}
               onClick={() => onFilterChange(option.value)}
             >
               {option.label}
@@ -106,12 +170,23 @@ export const FleetSidebar = ({
         })}
       </div>
 
-      <div ref={scrollContainerRef} className="ui-scroll min-h-0 flex-1 overflow-auto">
-        {agents.length === 0 ? (
-          <EmptyStatePanel title="No agents available." compact className="p-3 text-xs" />
+      {/* divider */}
+      <div className="mx-3 border-t border-white/5" />
+
+      {/* agent list */}
+      <div ref={scrollContainerRef} className="ui-scroll min-h-0 flex-1 overflow-auto p-2">
+        {filteredAgents.length === 0 ? (
+          searchQuery ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <Search className="mb-2 h-5 w-5 text-white/15" />
+              <p className="text-xs text-white/30">No agents match &ldquo;{searchQuery}&rdquo;</p>
+            </div>
+          ) : (
+            <EmptyStatePanel title="No agents available." compact className="p-3 text-xs" />
+          )
         ) : (
-          <div className="flex flex-col gap-2.5">
-            {agents.map((agent) => {
+          <div className="flex flex-col gap-1">
+            {filteredAgents.map((agent) => {
               const selected = selectedAgentId === agent.agentId;
               const avatarSeed = agent.avatarSeed ?? agent.agentId;
               return (
@@ -126,29 +201,36 @@ export const FleetSidebar = ({
                   }}
                   type="button"
                   data-testid={`fleet-agent-row-${agent.agentId}`}
-                  className={`group relative ui-card flex w-full items-center gap-3 overflow-hidden border px-3 py-3 text-left transition-colors ${
+                  className={`group relative flex w-full items-center gap-2.5 overflow-hidden rounded-lg border px-2.5 py-2 text-left transition-all duration-150 ${
                     selected
-                      ? "ui-card-selected"
-                      : "hover:bg-surface-2/45"
+                      ? "border-white/15 bg-white/7"
+                      : "border-transparent hover:border-white/8 hover:bg-white/4"
                   }`}
+                  style={selected ? { background: "rgba(255,255,255,0.06)" } : undefined}
                   onClick={() => onSelectAgent(agent.agentId)}
                 >
-                  <span
-                    aria-hidden="true"
-                    className={`ui-card-select-indicator ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-35"}`}
-                  />
+                  {selected && (
+                    <span
+                      aria-hidden="true"
+                      className="ui-card-select-indicator"
+                    />
+                  )}
                   <AgentAvatar
                     seed={avatarSeed}
                     name={agent.name}
                     avatarUrl={agent.avatarUrl ?? null}
-                    size={42}
+                    size={36}
                     isSelected={selected}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="type-secondary-heading truncate text-foreground">
+                    <p
+                      className={`truncate text-[13px] font-medium leading-tight ${
+                        selected ? "text-white/95" : "text-white/70"
+                      }`}
+                    >
                       {agent.name}
                     </p>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       <span
                         className={`ui-badge ${resolveAgentStatusBadgeClass(agent.status)}`}
                         data-status={agent.status}
@@ -156,7 +238,10 @@ export const FleetSidebar = ({
                         {resolveAgentStatusLabel(agent.status)}
                       </span>
                       {agent.awaitingUserInput ? (
-                        <span className={`ui-badge ${NEEDS_APPROVAL_BADGE_CLASS}`} data-status="approval">
+                        <span
+                          className={`ui-badge ${NEEDS_APPROVAL_BADGE_CLASS}`}
+                          data-status="approval"
+                        >
                           Needs approval
                         </span>
                       ) : null}
