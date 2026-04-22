@@ -1,5 +1,5 @@
 import type { AgentState, FocusFilter } from "@/features/agents/state/store";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AgentAvatar } from "./AgentAvatar";
 import {
   NEEDS_APPROVAL_BADGE_CLASS,
@@ -42,6 +42,16 @@ export const FleetSidebar = ({
   const previousTopByAgentIdRef = useRef<Map<string, number>>(new Map());
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDescription, setSelectedDescription] = useState<string>("");
+
+  useEffect(() => {
+    if (!selectedAgentId) { setSelectedDescription(""); return; }
+    try {
+      setSelectedDescription(localStorage.getItem(`ocs_agent_desc_${selectedAgentId}`) ?? "");
+    } catch {
+      setSelectedDescription("");
+    }
+  }, [selectedAgentId]);
 
   const agentOrderKey = useMemo(() => agents.map((agent) => agent.agentId).join("|"), [agents]);
 
@@ -232,6 +242,11 @@ export const FleetSidebar = ({
                     >
                       {agent.name}
                     </p>
+                    {selected && selectedDescription ? (
+                      <p className="mt-0.5 line-clamp-2 text-[10px] leading-tight text-white/40">
+                        {selectedDescription}
+                      </p>
+                    ) : null}
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       <span
                         className={`ui-badge ${resolveAgentStatusBadgeClass(agent.status)}`}

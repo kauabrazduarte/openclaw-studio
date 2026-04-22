@@ -14,12 +14,14 @@ import {
 import type { AgentState as AgentRecord } from "@/features/agents/state/store";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Check, ChevronRight, Clock, Cog, FileText, FolderOpen, Maximize2, Paperclip, Pencil, Trash2, X } from "lucide-react";
+import { ArrowUp, Check, ChevronRight, Clock, Cog, FileText, FolderOpen, Maximize2, Paperclip, Pencil, Square, Trash2, X } from "lucide-react";
 import type { GatewayModelChoice } from "@/lib/gateway/models";
 import { rewriteMediaLinesToMarkdown } from "@/lib/text/media-markdown";
 import { normalizeAssistantDisplayText } from "@/lib/text/assistantText";
 import { isNearBottom } from "@/lib/dom";
 import { AgentAvatar } from "./AgentAvatar";
+import { ModelSelectorModal } from "./ModelSelectorModal";
+import { ReasoningModal } from "./ReasoningModal";
 import type {
   ExecApprovalDecision,
   PendingExecApproval,
@@ -1006,6 +1008,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
   mdPreview = false,
   onMdPreviewToggle,
   onOpenFilesPanel,
+  allModels = [],
 }: {
   value: string;
   onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
@@ -1036,8 +1039,11 @@ const AgentChatComposer = memo(function AgentChatComposer({
   mdPreview?: boolean;
   onMdPreviewToggle?: () => void;
   onOpenFilesPanel?: () => void;
+  allModels?: GatewayModelChoice[];
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [modelModalOpen, setModelModalOpen] = useState(false);
+  const [reasoningModalOpen, setReasoningModalOpen] = useState(false);
 
   const handleFileInputChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -1133,25 +1139,14 @@ const AgentChatComposer = memo(function AgentChatComposer({
               </div>
             ))}
           </div>
-          {running ? (
-            <button
-              type="button"
-              aria-hidden="true"
-              tabIndex={-1}
-              disabled
-              className="invisible rounded-md border border-border/70 bg-surface-3 px-3 py-2 font-mono text-[12px] font-medium tracking-[0.02em] text-foreground"
-            >
-              {stopBusy ? "Stopping" : "Stop"}
-            </button>
-          ) : null}
           <button
             type="button"
             aria-hidden="true"
             tabIndex={-1}
             disabled
-            className="ui-btn-primary ui-btn-send invisible px-3 py-2 font-mono text-[12px] font-medium tracking-[0.02em]"
+            className="ui-btn-primary invisible h-9 w-9 shrink-0 rounded-full p-0"
           >
-            Send
+            <ArrowUp className="h-4 w-4" />
           </button>
         </div>
       ) : null}
@@ -1200,71 +1195,52 @@ const AgentChatComposer = memo(function AgentChatComposer({
           placeholder="type a message"
         />
         {running ? (
-          <span className="inline-flex" title={stopReason || undefined}>
-            <button
-              className="shrink-0 rounded-md border border-border/70 bg-surface-3 px-3.5 py-2.5 font-mono text-[12px] font-medium tracking-[0.02em] text-foreground transition hover:bg-surface-2 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground sm:px-3 sm:py-2"
-              type="button"
-              onClick={onStop}
-              disabled={stopDisabled}
-              aria-label={stopAriaLabel}
-            >
-              {stopBusy ? "Stopping" : "Stop"}
-            </button>
-          </span>
-        ) : null}
-        <button
-          className="ui-btn-primary ui-btn-send shrink-0 px-3.5 py-2.5 font-mono text-[12px] font-medium tracking-[0.02em] disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground sm:px-3 sm:py-2"
-          type="button"
-          onClick={onSend}
-          disabled={sendDisabled}
-        >
-          Send
-        </button>
+          <button
+            className="shrink-0 rounded-full border border-border/70 bg-surface-3 p-2 text-foreground transition hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            onClick={onStop}
+            disabled={stopDisabled}
+            aria-label={stopAriaLabel}
+            title={stopReason || "Stop agent"}
+          >
+            <Square className="h-4 w-4" />
+          </button>
+        ) : (
+          <button
+            className="ui-btn-primary shrink-0 rounded-full p-2 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground"
+            type="button"
+            onClick={onSend}
+            disabled={sendDisabled}
+            aria-label="Send message"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </button>
+        )}
       </div>
       <div className="mt-2 flex flex-col gap-2 sm:mt-1 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
-          <InlineHoverTooltip text="Choose model">
-            <select
-              className="ui-input ui-control-important h-6 min-w-0 max-w-full rounded-md px-1.5 text-[10px] font-semibold text-foreground"
-              aria-label="Model"
-              value={modelValue}
-              style={{ width: `${modelSelectWidthCh}ch`, maxWidth: "clamp(12ch, 58vw, 30ch)" }}
-              onChange={(event) => {
-                const nextValue = event.target.value.trim();
-                onModelChange(nextValue ? nextValue : null);
-                event.currentTarget.blur();
-              }}
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 sm:w-auto sm:flex-nowrap">
+          <InlineHoverTooltip text="Choose model — click to browse all">
+            <button
+              type="button"
+              className="ui-input ui-control-important inline-flex h-6 min-w-0 items-center gap-1 rounded-md px-1.5 text-[10px] font-semibold text-foreground hover:bg-white/8 transition-colors"
+              style={{ maxWidth: "clamp(12ch, 58vw, 30ch)" }}
+              aria-label="Select model"
+              onClick={() => setModelModalOpen(true)}
             >
-              {modelOptions.length === 0 ? (
-                <option value="">No models found</option>
-              ) : null}
-              {modelOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              <span className="truncate">{modelSelectedLabel}</span>
+            </button>
           </InlineHoverTooltip>
           {allowThinking ? (
-            <InlineHoverTooltip text="Select reasoning effort">
-              <select
-                className="ui-input ui-control-important h-6 min-w-0 max-w-full rounded-md px-1.5 text-[10px] font-semibold text-foreground"
-                aria-label="Thinking"
-                value={thinkingValue}
-                style={{ width: `${thinkingSelectWidthCh}ch`, maxWidth: "min(40vw, 16ch)" }}
-                onChange={(event) => {
-                  const nextValue = event.target.value.trim();
-                  onThinkingChange(nextValue ? nextValue : null);
-                }}
+            <InlineHoverTooltip text="Reasoning effort — click to learn more">
+              <button
+                type="button"
+                className="ui-input ui-control-important inline-flex h-6 min-w-0 items-center gap-1 rounded-md px-1.5 text-[10px] font-semibold text-foreground hover:bg-white/8 transition-colors"
+                style={{ maxWidth: "min(40vw, 16ch)" }}
+                aria-label="Select reasoning effort"
+                onClick={() => setReasoningModalOpen(true)}
               >
-                <option value="">Default</option>
-                <option value="off">Off</option>
-                <option value="minimal">Minimal</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="xhigh">XHigh</option>
-              </select>
+                <span className="truncate">{thinkingSelectedLabel}</span>
+              </button>
             </InlineHoverTooltip>
           ) : null}
         </div>
@@ -1340,6 +1316,20 @@ const AgentChatComposer = memo(function AgentChatComposer({
           </InlineHoverTooltip>
         </div>
       </div>
+      <ModelSelectorModal
+        open={modelModalOpen}
+        modelOptions={modelOptions}
+        currentValue={modelValue}
+        models={allModels}
+        onSelect={(value) => onModelChange(value || null)}
+        onClose={() => setModelModalOpen(false)}
+      />
+      <ReasoningModal
+        open={reasoningModalOpen}
+        currentValue={thinkingValue}
+        onSelect={(value) => onThinkingChange(value)}
+        onClose={() => setReasoningModalOpen(false)}
+      />
     </div>
   );
 });
@@ -1893,7 +1883,9 @@ export const AgentChatPanel = ({
             modelOptions={modelOptionsWithFallback.map((option) => ({
               value: option.value,
               label: option.label,
+              reasoning: option.reasoning,
             }))}
+            allModels={models}
             modelValue={modelValue}
             allowThinking={allowThinking}
             thinkingValue={agent.thinkingLevel ?? ""}

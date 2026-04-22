@@ -3,8 +3,11 @@ import { Bebas_Neue, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "OpenClaw Studio",
+  title: "OpenClaw Draak",
   description: "Focused operator studio for the OpenClaw gateway.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 const display = Bebas_Neue({

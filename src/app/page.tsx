@@ -295,6 +295,7 @@ const AgentStudioPage = () => {
   const [createAgentBlock, setCreateAgentBlock] = useState<CreateAgentBlockState | null>(null);
   const [editModalAgentId, setEditModalAgentId] = useState<string | null>(null);
   const [filesPanelOpen, setFilesPanelOpen] = useState(false);
+  const [showHome, setShowHome] = useState(true);
   const [pendingExecApprovalsByAgentId, setPendingExecApprovalsByAgentId] = useState<
     Record<string, PendingExecApproval[]>
   >({});
@@ -1484,6 +1485,7 @@ const AgentStudioPage = () => {
           status={gatewayStatus}
           onConnectionSettings={() => setShowConnectionPanel(true)}
           onGoHome={() => {
+            setShowHome(true);
             dispatch({ type: "selectAgent", agentId: null });
           }}
           onOpenFilesPanel={() => setFilesPanelOpen(true)}
@@ -1679,6 +1681,20 @@ const AgentStudioPage = () => {
                 </div>
               </div>
             </div>
+          ) : showHome ? (
+            <HomeScreen
+              agents={agents}
+              gatewayStatus={gatewayStatus}
+              onSelectAgent={(agentId) => {
+                dispatch({ type: "selectAgent", agentId });
+                setShowHome(false);
+                setMobilePane("chat");
+              }}
+              onCreateAgent={() => {
+                handleOpenCreateAgentModal();
+              }}
+              onOpenSettings={() => setShowConnectionPanel(true)}
+            />
           ) : (
             <div className="flex min-h-0 flex-1 flex-col gap-4 xl:flex-row">
               <div className="glass-panel ui-panel p-2 xl:hidden" data-testid="mobile-pane-toggle">
@@ -1780,16 +1796,10 @@ const AgentStudioPage = () => {
                     </div>
                   </div>
                 ) : (
-                  <HomeScreen
-                    agents={agents}
-                    gatewayStatus={gatewayStatus}
-                    onSelectAgent={(agentId) => {
-                      dispatch({ type: "selectAgent", agentId });
-                      setMobilePane("chat");
-                    }}
-                    onCreateAgent={handleOpenCreateAgentModal}
-                    onOpenSettings={() => setShowConnectionPanel(true)}
-                  />
+                  <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+                    <span className="text-4xl">🐉</span>
+                    <p className="font-mono text-[12px] text-white/30">Select an agent from the sidebar</p>
+                  </div>
                 )}
               </div>
             </div>

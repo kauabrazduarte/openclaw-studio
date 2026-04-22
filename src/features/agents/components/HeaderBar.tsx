@@ -52,14 +52,14 @@ export const HeaderBar = ({
     >
       {/* left: logo */}
       <div className="flex items-center gap-2">
-        <Zap className="h-4 w-4 text-white/60" />
+        <span className="text-base leading-none">🐉</span>
         <span className="font-mono text-[13px] font-semibold tracking-[0.06em] text-white/80 uppercase">
           OpenClaw
         </span>
         <span
           className="hidden sm:inline font-mono text-[10px] font-medium tracking-[0.1em] text-white/25 uppercase"
         >
-          Studio
+          Draak
         </span>
       </div>
 
