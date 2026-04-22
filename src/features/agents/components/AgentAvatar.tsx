@@ -7,6 +7,7 @@ const AGENT_EMOJIS = [
 ];
 
 function emojiFromSeed(seed: string): string {
+  if (AGENT_EMOJIS.includes(seed)) return seed;
   let h = 0;
   for (let i = 0; i < seed.length; i++) {
     h = (Math.imul(31, h) + seed.charCodeAt(i)) >>> 0;

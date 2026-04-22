@@ -1750,6 +1750,7 @@ const AgentStudioPage = () => {
                         stopDisabledReason={focusedAgentStopDisabledReason}
                         onLoadMoreHistory={() => loadMoreAgentHistory(focusedAgent.agentId)}
                         onOpenSettings={() => handleOpenAgentSettingsRoute(focusedAgent.agentId)}
+                        onEditAgent={() => setEditModalAgentId(focusedAgent.agentId)}
                         onRename={(name) =>
                           settingsMutationController.handleRenameAgent(focusedAgent.agentId, name)
                         }

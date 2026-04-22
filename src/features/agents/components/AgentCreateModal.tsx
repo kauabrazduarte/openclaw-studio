@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AgentCreateModalSubmitPayload } from "@/features/agents/creation/types";
 import type { AgentState } from "@/features/agents/state/store";
 
@@ -41,11 +41,12 @@ const resolveInitialName = (suggestedName: string): string => {
   return trimmed;
 };
 
+type GwAgent = { agentId: string; name: string };
+
 const AgentCreateModalContent = ({
   suggestedName,
   busy,
   submitError,
-  existingAgents = [],
   onClose,
   onSubmit,
   onSelectExisting,
@@ -53,6 +54,36 @@ const AgentCreateModalContent = ({
   const [tab, setTab] = useState<"new" | "existing">("new");
   const [name, setName] = useState(() => resolveInitialName(suggestedName));
   const [search, setSearch] = useState("");
+
+  // Gateway agents (fetched fresh from OpenClaw when "existing" tab opens)
+  const [gwAgents, setGwAgents] = useState<GwAgent[] | null>(null);
+  const [gwLoading, setGwLoading] = useState(false);
+  const [gwError, setGwError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (tab !== "existing") return;
+    if (gwAgents !== null || gwLoading) return;
+    setGwLoading(true);
+    setGwError(null);
+    fetch("/api/runtime/fleet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    })
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        const seeds =
+          (data as { result?: { seeds?: unknown[] } })?.result?.seeds ?? [];
+        const agents: GwAgent[] = (seeds as Array<Record<string, unknown>>)
+          .filter((s) => typeof s.agentId === "string" && typeof s.name === "string")
+          .map((s) => ({ agentId: s.agentId as string, name: s.name as string }));
+        setGwAgents(agents);
+      })
+      .catch(() => {
+        setGwError("Falha ao carregar agentes do gateway.");
+      })
+      .finally(() => setGwLoading(false));
+  }, [tab, gwAgents, gwLoading]);
 
   const canSubmit = name.trim().length > 0;
 
@@ -63,7 +94,7 @@ const AgentCreateModalContent = ({
     void onSubmit({ name: trimmedName });
   };
 
-  const filteredAgents = existingAgents.filter((a) =>
+  const filteredAgents = (gwAgents ?? []).filter((a) =>
     a.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -101,7 +132,7 @@ const AgentCreateModalContent = ({
         </div>
 
         {/* tabs */}
-        {existingAgents.length > 0 && onSelectExisting ? (
+        {onSelectExisting ? (
           <div className="flex border-b border-border/35 px-4 sm:px-6">
             <button
               type="button"
@@ -123,7 +154,7 @@ const AgentCreateModalContent = ({
               }`}
               onClick={() => setTab("existing")}
             >
-              Existente ({existingAgents.length})
+              Existente{gwAgents !== null ? ` (${gwAgents.length})` : ""}
             </button>
           </div>
         ) : null}
@@ -183,14 +214,22 @@ const AgentCreateModalContent = ({
               />
             </div>
             <div className="max-h-72 overflow-y-auto px-4 pb-4 sm:px-6">
-              {filteredAgents.length === 0 ? (
+              {gwLoading ? (
+                <p className="py-6 text-center font-mono text-[11px] text-muted-foreground">
+                  Carregando agentes…
+                </p>
+              ) : gwError ? (
+                <p className="py-6 text-center font-mono text-[11px] text-red-400">
+                  {gwError}
+                </p>
+              ) : filteredAgents.length === 0 ? (
                 <p className="py-6 text-center font-mono text-[11px] text-muted-foreground">
                   Nenhum agente encontrado.
                 </p>
               ) : (
                 <div className="space-y-1 pt-1">
                   {filteredAgents.map((agent) => {
-                    const emoji = resolveInitialEmoji(agent.avatarSeed ?? agent.agentId);
+                    const emoji = resolveInitialEmoji(agent.agentId);
                     return (
                       <button
                         key={agent.agentId}
@@ -209,13 +248,6 @@ const AgentCreateModalContent = ({
                             {agent.agentId}
                           </div>
                         </div>
-                        <span
-                          className={`h-2 w-2 shrink-0 rounded-full ${
-                            agent.status === "running"
-                              ? "bg-emerald-400"
-                              : "bg-white/20"
-                          }`}
-                        />
                       </button>
                     );
                   })}

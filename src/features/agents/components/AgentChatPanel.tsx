@@ -138,6 +138,7 @@ type AgentChatPanelProps = {
   stopDisabledReason?: string | null;
   onLoadMoreHistory: () => void;
   onOpenSettings: () => void;
+  onEditAgent?: () => void;
   onRename?: (name: string) => Promise<boolean>;
   onNewSession?: () => Promise<void> | void;
   onModelChange: (value: string | null) => void;
@@ -1064,12 +1065,10 @@ const AgentChatComposer = memo(function AgentChatComposer({
   onMdPreviewToggle,
   onOpenFilesPanel,
   allModels = [],
-  onValueSet,
 }: {
   value: string;
   onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
   onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
-  onValueSet?: (value: string) => void;
   onSend: () => void;
   onStop: () => void;
   canSend: boolean;
@@ -1101,63 +1100,6 @@ const AgentChatComposer = memo(function AgentChatComposer({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [modelModalOpen, setModelModalOpen] = useState(false);
   const [reasoningModalOpen, setReasoningModalOpen] = useState(false);
-
-  // slash command picker state
-  const [slashCmdIdx, setSlashCmdIdx] = useState(0);
-  const slashMatches = useMemo<readonly SlashCommand[]>(() => {
-    if (!value.startsWith("/")) return [];
-    const q = value.slice(1).toLowerCase().trimEnd();
-    return SLASH_COMMANDS.filter((c) => c.command.slice(1).startsWith(q));
-  }, [value]);
-  const slashCmdOpen = slashMatches.length > 0;
-
-  const selectSlashCommand = useCallback(
-    (cmd: string) => {
-      onValueSet?.(cmd + " ");
-      setSlashCmdIdx(0);
-    },
-    [onValueSet]
-  );
-
-  const handleComposerKeyDownWithSlash = useCallback(
-    (event: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (slashCmdOpen) {
-        if (event.key === "ArrowDown") {
-          event.preventDefault();
-          setSlashCmdIdx((i) => Math.min(i + 1, slashMatches.length - 1));
-          return;
-        }
-        if (event.key === "ArrowUp") {
-          event.preventDefault();
-          setSlashCmdIdx((i) => Math.max(i - 1, 0));
-          return;
-        }
-        if (event.key === "Tab") {
-          event.preventDefault();
-          if (slashMatches[slashCmdIdx]) selectSlashCommand(slashMatches[slashCmdIdx].command);
-          return;
-        }
-        if (event.key === "Escape") {
-          event.preventDefault();
-          onValueSet?.("");
-          setSlashCmdIdx(0);
-          return;
-        }
-        if (event.key === "Enter") {
-          event.preventDefault();
-          if (slashMatches[slashCmdIdx]) selectSlashCommand(slashMatches[slashCmdIdx].command);
-          return;
-        }
-      }
-      onKeyDown(event);
-    },
-    [slashCmdOpen, slashMatches, slashCmdIdx, onKeyDown, onValueSet, selectSlashCommand]
-  );
-
-  // reset picker index when matches change
-  useEffect(() => {
-    setSlashCmdIdx(0);
-  }, [slashMatches.length]);
 
   const handleFileInputChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -1299,20 +1241,13 @@ const AgentChatComposer = memo(function AgentChatComposer({
         </div>
       ) : null}
       <div className="relative flex min-w-0 items-end gap-2">
-        {slashCmdOpen ? (
-          <SlashCommandPicker
-            commands={slashMatches}
-            activeIndex={slashCmdIdx}
-            onSelect={selectSlashCommand}
-          />
-        ) : null}
         <textarea
           ref={inputRef}
           rows={1}
           value={value}
           className="chat-composer-input min-h-[28px] max-h-[30vh] min-w-0 flex-1 resize-none border-0 bg-transparent px-0 py-1 text-[14px] leading-6 text-foreground outline-none shadow-none transition placeholder:text-muted-foreground/65 focus:outline-none focus-visible:outline-none focus-visible:ring-0"
           onChange={onChange}
-          onKeyDown={handleComposerKeyDownWithSlash}
+          onKeyDown={onKeyDown}
           placeholder="escreva uma mensagem"
         />
         {running ? (
@@ -1464,6 +1399,7 @@ export const AgentChatPanel = ({
   stopDisabledReason = null,
   onLoadMoreHistory,
   onOpenSettings,
+  onEditAgent,
   onRename,
   onNewSession,
   onModelChange,
@@ -1762,6 +1698,63 @@ export const AgentChatPanel = ({
     [onDraftChange]
   );
 
+  // ── Slash command state (lives in AgentChatPanel to avoid overflow-hidden clipping) ──
+  const [slashCmdIdx, setSlashCmdIdx] = useState(0);
+  const slashMatches = useMemo<readonly SlashCommand[]>(() => {
+    if (!draftValue.startsWith("/")) return [];
+    const q = draftValue.slice(1).toLowerCase().trimEnd();
+    return SLASH_COMMANDS.filter((c) => c.command.slice(1).startsWith(q));
+  }, [draftValue]);
+  const slashCmdOpen = slashMatches.length > 0;
+
+  const selectSlashCommand = useCallback(
+    (cmd: string) => {
+      handleComposerValueSet(cmd + " ");
+      setSlashCmdIdx(0);
+    },
+    [handleComposerValueSet]
+  );
+
+  const handleComposerKeyDownWithSlash = useCallback(
+    (event: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (slashCmdOpen) {
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          setSlashCmdIdx((i) => Math.min(i + 1, slashMatches.length - 1));
+          return;
+        }
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          setSlashCmdIdx((i) => Math.max(i - 1, 0));
+          return;
+        }
+        if (event.key === "Tab") {
+          event.preventDefault();
+          if (slashMatches[slashCmdIdx]) selectSlashCommand(slashMatches[slashCmdIdx].command);
+          return;
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          handleComposerValueSet("");
+          setSlashCmdIdx(0);
+          return;
+        }
+        if (event.key === "Enter") {
+          event.preventDefault();
+          if (slashMatches[slashCmdIdx]) selectSlashCommand(slashMatches[slashCmdIdx].command);
+          return;
+        }
+      }
+      handleComposerKeyDown(event);
+    },
+    [slashCmdOpen, slashMatches, slashCmdIdx, handleComposerKeyDown, handleComposerValueSet, selectSlashCommand]
+  );
+
+  useEffect(() => {
+    setSlashCmdIdx(0);
+  }, [slashMatches.length]);
+  // ──────────────────────────────────────────────────────────────────────────────────────
+
   const beginRename = useCallback(() => {
     if (!onRename) return;
     setRenameEditing(true);
@@ -1905,13 +1898,13 @@ export const AgentChatPanel = ({
                       <div className="type-agent-name min-w-0 truncate text-foreground">
                         {agent.name}
                       </div>
-                      {onRename ? (
+                      {(onRename || onEditAgent) ? (
                         <button
                           className="ui-btn-icon ui-btn-icon-xs agent-rename-control shrink-0"
                           type="button"
-                          aria-label="Renomear agente"
+                          aria-label="Editar agente"
                           data-testid="agent-rename-toggle"
-                          onClick={beginRename}
+                          onClick={() => { if (onEditAgent) { onEditAgent(); } else { beginRename(); } }}
                         >
                           <Pencil className="h-3 w-3" />
                         </button>
@@ -2011,12 +2004,18 @@ export const AgentChatPanel = ({
         </div>
 
         <div className="relative z-20 mt-1.5 sm:mt-2">
+          {slashCmdOpen ? (
+            <SlashCommandPicker
+              commands={slashMatches}
+              activeIndex={slashCmdIdx}
+              onSelect={selectSlashCommand}
+            />
+          ) : null}
           <AgentChatComposer
             value={draftValue}
             inputRef={handleDraftRef}
             onChange={handleComposerChange}
-            onKeyDown={handleComposerKeyDown}
-            onValueSet={handleComposerValueSet}
+            onKeyDown={handleComposerKeyDownWithSlash}
             onSend={handleComposerSend}
             onStop={onStopRun}
             canSend={canSend}
