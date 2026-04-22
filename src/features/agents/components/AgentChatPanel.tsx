@@ -978,6 +978,61 @@ const InlineHoverTooltip = ({
 
 type AttachedFile = { name: string; content: string; mimeType: string };
 
+// ── Slash commands ──────────────────────────────────────────────────────────
+const SLASH_COMMANDS = [
+  { command: "/compact", description: "Compacta o histórico removendo detalhes de ferramentas" },
+  { command: "/clear", description: "Limpa o histórico da sessão atual" },
+  { command: "/help", description: "Exibe comandos disponíveis" },
+  { command: "/model", description: "Exibe o modelo atual" },
+  { command: "/reset", description: "Reinicia as configurações da sessão" },
+  { command: "/status", description: "Exibe o status atual do agente" },
+  { command: "/memory", description: "Exibe e gerencia a memória do agente" },
+  { command: "/init", description: "Inicializa o CLAUDE.md no projeto" },
+  { command: "/review", description: "Solicita uma revisão de código" },
+  { command: "/bug", description: "Reporta um bug para o agente" },
+  { command: "/doctor", description: "Verifica a saúde do ambiente do agente" },
+  { command: "/logout", description: "Encerra a sessão autenticada" },
+] as const;
+
+type SlashCommand = (typeof SLASH_COMMANDS)[number];
+
+const SlashCommandPicker = memo(function SlashCommandPicker({
+  commands,
+  activeIndex,
+  onSelect,
+}: {
+  commands: readonly SlashCommand[];
+  activeIndex: number;
+  onSelect: (command: string) => void;
+}) {
+  if (commands.length === 0) return null;
+  return (
+    <div className="absolute bottom-full left-0 right-0 z-50 mb-1.5 overflow-hidden rounded-xl border border-border/60 bg-card shadow-lg">
+      {commands.map((cmd, i) => (
+        <button
+          key={cmd.command}
+          type="button"
+          className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors ${
+            i === activeIndex
+              ? "bg-white/10 text-foreground"
+              : "text-muted-foreground hover:bg-white/6"
+          }`}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onSelect(cmd.command);
+          }}
+        >
+          <span className="shrink-0 font-mono text-[12px] font-bold text-primary">
+            {cmd.command}
+          </span>
+          <span className="min-w-0 truncate text-[11px]">{cmd.description}</span>
+        </button>
+      ))}
+    </div>
+  );
+});
+// ────────────────────────────────────────────────────────────────────────────
+
 const AgentChatComposer = memo(function AgentChatComposer({
   value,
   onChange,
@@ -1009,10 +1064,12 @@ const AgentChatComposer = memo(function AgentChatComposer({
   onMdPreviewToggle,
   onOpenFilesPanel,
   allModels = [],
+  onValueSet,
 }: {
   value: string;
   onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
   onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
+  onValueSet?: (value: string) => void;
   onSend: () => void;
   onStop: () => void;
   canSend: boolean;
@@ -1044,6 +1101,63 @@ const AgentChatComposer = memo(function AgentChatComposer({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [modelModalOpen, setModelModalOpen] = useState(false);
   const [reasoningModalOpen, setReasoningModalOpen] = useState(false);
+
+  // slash command picker state
+  const [slashCmdIdx, setSlashCmdIdx] = useState(0);
+  const slashMatches = useMemo<readonly SlashCommand[]>(() => {
+    if (!value.startsWith("/")) return [];
+    const q = value.slice(1).toLowerCase().trimEnd();
+    return SLASH_COMMANDS.filter((c) => c.command.slice(1).startsWith(q));
+  }, [value]);
+  const slashCmdOpen = slashMatches.length > 0;
+
+  const selectSlashCommand = useCallback(
+    (cmd: string) => {
+      onValueSet?.(cmd + " ");
+      setSlashCmdIdx(0);
+    },
+    [onValueSet]
+  );
+
+  const handleComposerKeyDownWithSlash = useCallback(
+    (event: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (slashCmdOpen) {
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          setSlashCmdIdx((i) => Math.min(i + 1, slashMatches.length - 1));
+          return;
+        }
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          setSlashCmdIdx((i) => Math.max(i - 1, 0));
+          return;
+        }
+        if (event.key === "Tab") {
+          event.preventDefault();
+          if (slashMatches[slashCmdIdx]) selectSlashCommand(slashMatches[slashCmdIdx].command);
+          return;
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onValueSet?.("");
+          setSlashCmdIdx(0);
+          return;
+        }
+        if (event.key === "Enter") {
+          event.preventDefault();
+          if (slashMatches[slashCmdIdx]) selectSlashCommand(slashMatches[slashCmdIdx].command);
+          return;
+        }
+      }
+      onKeyDown(event);
+    },
+    [slashCmdOpen, slashMatches, slashCmdIdx, onKeyDown, onValueSet, selectSlashCommand]
+  );
+
+  // reset picker index when matches change
+  useEffect(() => {
+    setSlashCmdIdx(0);
+  }, [slashMatches.length]);
 
   const handleFileInputChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -1101,7 +1215,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
   }, [thinkingValue]);
   const thinkingSelectWidthCh = Math.max(9, Math.min(16, thinkingSelectedLabel.length + 6));
   return (
-    <div className="w-full max-w-full overflow-hidden rounded-2xl border border-border/65 bg-surface-2/45 px-3 py-2">
+    <div className="w-full max-w-full overflow-hidden rounded-xl border border-border/65 bg-surface-2/45 px-2 py-1.5 sm:rounded-2xl sm:px-3 sm:py-2">
       {queuedMessages.length > 0 ? (
         <div
           className={`mb-2 grid items-start gap-2 ${
@@ -1184,14 +1298,21 @@ const AgentChatComposer = memo(function AgentChatComposer({
           ))}
         </div>
       ) : null}
-      <div className="flex min-w-0 items-end gap-2">
+      <div className="relative flex min-w-0 items-end gap-2">
+        {slashCmdOpen ? (
+          <SlashCommandPicker
+            commands={slashMatches}
+            activeIndex={slashCmdIdx}
+            onSelect={selectSlashCommand}
+          />
+        ) : null}
         <textarea
           ref={inputRef}
           rows={1}
           value={value}
-          className="chat-composer-input min-h-[28px] max-h-[34vh] min-w-0 flex-1 resize-none border-0 bg-transparent px-0 py-1 text-[16px] leading-6 text-foreground outline-none shadow-none transition placeholder:text-muted-foreground/65 focus:outline-none focus-visible:outline-none focus-visible:ring-0 sm:text-[15px]"
+          className="chat-composer-input min-h-[28px] max-h-[30vh] min-w-0 flex-1 resize-none border-0 bg-transparent px-0 py-1 text-[14px] leading-6 text-foreground outline-none shadow-none transition placeholder:text-muted-foreground/65 focus:outline-none focus-visible:outline-none focus-visible:ring-0"
           onChange={onChange}
-          onKeyDown={onKeyDown}
+          onKeyDown={handleComposerKeyDownWithSlash}
           placeholder="escreva uma mensagem"
         />
         {running ? (
@@ -1217,8 +1338,8 @@ const AgentChatComposer = memo(function AgentChatComposer({
           </button>
         )}
       </div>
-      <div className="mt-2 flex flex-col gap-2 sm:mt-1 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 sm:w-auto sm:flex-nowrap">
+      <div className="mt-1 flex flex-row flex-wrap items-center justify-between gap-1 sm:mt-1 sm:gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-1.5">
           <InlineHoverTooltip text="Escolher modelo — clique para ver todos">
             <button
               type="button"
@@ -1244,7 +1365,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
             </InlineHoverTooltip>
           ) : null}
         </div>
-        <div className="composer-toolbar flex w-full flex-wrap items-center justify-end gap-1.5 text-[10px] text-muted-foreground sm:ml-auto sm:w-auto sm:flex-nowrap">
+        <div className="composer-toolbar flex flex-wrap items-center justify-end gap-1 text-[10px] text-muted-foreground sm:gap-1.5">
           {/* attach file button */}
           <InlineHoverTooltip text={attachedFiles.length > 0 ? `${attachedFiles.length} arquivo(s) anexado(s)` : "Anexar arquivos à mensagem"}>
             <button
@@ -1632,6 +1753,15 @@ export const AgentChatPanel = ({
     handleSend(draftValue);
   }, [draftValue, handleSend]);
 
+  const handleComposerValueSet = useCallback(
+    (newValue: string) => {
+      plainDraftRef.current = newValue;
+      setDraftValue(newValue);
+      onDraftChange(newValue);
+    },
+    [onDraftChange]
+  );
+
   const beginRename = useCallback(() => {
     if (!onRename) return;
     setRenameEditing(true);
@@ -1718,20 +1848,20 @@ export const AgentChatPanel = ({
 
   return (
     <div data-agent-panel className="group fade-up relative flex h-full w-full min-w-0 flex-col overflow-hidden">
-      <div className="px-3 pt-2 sm:px-4 sm:pt-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
+      <div className="px-2 pt-1.5 sm:px-4 sm:pt-3">
+        <div className="flex items-center justify-between gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-center gap-2 sm:items-start sm:gap-3">
             <AgentAvatar
               seed={avatarSeed}
               name={agent.name}
               avatarUrl={agent.avatarUrl ?? null}
-              size={56}
+              size={36}
               isSelected={isSelected}
             />
 
             <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center gap-2">
-                <div className="min-w-0 w-[clamp(8.5rem,42vw,16rem)] sm:w-[clamp(11rem,34vw,16rem)]">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <div className="min-w-0 w-[clamp(7rem,38vw,16rem)] sm:w-[clamp(11rem,34vw,16rem)]">
                   {renameEditing ? (
                     <div ref={renameEditorRef} className="flex h-8 items-center gap-1.5">
                       <input
@@ -1796,7 +1926,7 @@ export const AgentChatPanel = ({
             </div>
           </div>
 
-          <div className="mt-0.5 flex w-full items-center justify-end gap-2 sm:w-auto">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <button
               className="nodrag ui-btn-icon !inline-flex md:!hidden"
               type="button"
@@ -1807,7 +1937,7 @@ export const AgentChatPanel = ({
               <Maximize2 className="h-4 w-4" />
             </button>
             <button
-              className="nodrag ui-btn-primary px-2.5 py-1.5 font-mono text-[11px] font-medium tracking-[0.02em] disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground"
+              className="nodrag ui-btn-primary hidden px-2 py-1 font-mono text-[10px] font-medium tracking-[0.02em] disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground sm:block sm:px-2.5 sm:py-1.5 sm:text-[11px]"
               type="button"
               data-testid="agent-new-session-toggle"
               aria-label="Iniciar nova sessão"
@@ -1818,6 +1948,21 @@ export const AgentChatPanel = ({
               disabled={newSessionDisabled}
             >
               {newSessionBusy ? "Iniciando..." : "Nova sessão"}
+            </button>
+            {/* mobile compact new session button */}
+            <button
+              className="nodrag ui-btn-icon ui-btn-icon-xs sm:hidden"
+              type="button"
+              aria-label="Iniciar nova sessão"
+              title="Nova sessão"
+              onClick={() => {
+                void handleNewSession();
+              }}
+              disabled={newSessionDisabled}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="10" x2="14" y1="10" y2="10"/>
+              </svg>
             </button>
             <button
               className="nodrag ui-btn-icon"
@@ -1833,7 +1978,7 @@ export const AgentChatPanel = ({
         </div>
       </div>
 
-      <div className="mt-3 flex min-h-0 flex-1 flex-col px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-4 sm:pb-4">
+      <div className="mt-1.5 flex min-h-0 flex-1 flex-col px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:mt-3 sm:px-4 sm:pb-4">
         <div className="relative h-0 min-h-0 flex-1 overflow-hidden">
           <AgentChatTranscript
             agentId={agent.agentId}
@@ -1865,12 +2010,13 @@ export const AgentChatPanel = ({
           />
         </div>
 
-        <div className="relative z-20 mt-3">
+        <div className="relative z-20 mt-1.5 sm:mt-2">
           <AgentChatComposer
             value={draftValue}
             inputRef={handleDraftRef}
             onChange={handleComposerChange}
             onKeyDown={handleComposerKeyDown}
+            onValueSet={handleComposerValueSet}
             onSend={handleComposerSend}
             onStop={onStopRun}
             canSend={canSend}

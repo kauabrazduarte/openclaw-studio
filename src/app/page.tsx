@@ -1491,7 +1491,7 @@ const AgentStudioPage = () => {
           onOpenFilesPanel={() => setFilesPanelOpen(true)}
           onOpenAnalytics={() => { window.location.href = "/studio/analytics"; }}
         />
-        <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-3 pt-2 sm:px-4 sm:pb-4 sm:pt-3 md:px-5 md:pb-5 md:pt-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-1.5 px-1.5 pb-1.5 pt-1 sm:gap-3 sm:px-4 sm:pb-4 sm:pt-3 md:px-5 md:pb-5 md:pt-3">
           {connectionPanelVisible ? (
             <div className="fixed inset-0 z-[140]" data-testid="gateway-connection-overlay">
               <div
@@ -1812,6 +1812,7 @@ const AgentStudioPage = () => {
           suggestedName={suggestedCreateAgentName}
           busy={createAgentBusy}
           submitError={createAgentModalError}
+          existingAgents={agents}
           onClose={() => {
             if (createAgentBusy) return;
             setCreateAgentModalError(null);
@@ -1819,6 +1820,12 @@ const AgentStudioPage = () => {
           }}
           onSubmit={(payload) => {
             void handleCreateAgentSubmit(payload);
+          }}
+          onSelectExisting={(agentId) => {
+            dispatch({ type: "selectAgent", agentId });
+            setCreateAgentModalOpen(false);
+            setMobilePane("chat");
+            setShowHome(false);
           }}
         />
       ) : null}
@@ -1839,6 +1846,7 @@ const AgentStudioPage = () => {
               void settingsMutationController.handleRenameAgent(editModalAgentId, name);
             }
             persistAvatarSeed(editModalAgentId, avatarSeed);
+            dispatch({ type: "updateAgent", agentId: editModalAgentId, patch: { avatarSeed } });
             setEditModalAgentId(null);
           }}
         />
