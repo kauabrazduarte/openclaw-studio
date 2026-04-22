@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { GatewayStatus } from "@/lib/gateway/gateway-status";
 import { BarChart2, FolderOpen, Home, Plug, Zap } from "lucide-react";
 import { resolveGatewayStatusBadgeClass, resolveGatewayStatusLabel } from "./colorSemantics";
+import { Tooltip } from "@/components/Tooltip";
 
 type HeaderBarProps = {
   status: GatewayStatus;
@@ -66,37 +67,40 @@ export const HeaderBar = ({
       <div className="flex items-center gap-1.5">
         {/* nav buttons */}
         {onGoHome ? (
-          <button
-            type="button"
-            className="ui-btn-icon ui-btn-icon-xs"
-            onClick={onGoHome}
-            title="Home"
-            aria-label="Go home"
-          >
-            <Home className="h-3.5 w-3.5" />
-          </button>
+          <Tooltip text="Go to home / agent list" side="bottom">
+            <button
+              type="button"
+              className="ui-btn-icon ui-btn-icon-xs"
+              onClick={onGoHome}
+              aria-label="Go home"
+            >
+              <Home className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
         ) : null}
         {onOpenFilesPanel ? (
-          <button
-            type="button"
-            className="ui-btn-icon ui-btn-icon-xs"
-            onClick={onOpenFilesPanel}
-            title="File vault"
-            aria-label="Open file vault"
-          >
-            <FolderOpen className="h-3.5 w-3.5" />
-          </button>
+          <Tooltip text="File vault — uploads & favorites" side="bottom">
+            <button
+              type="button"
+              className="ui-btn-icon ui-btn-icon-xs"
+              onClick={onOpenFilesPanel}
+              aria-label="Open file vault"
+            >
+              <FolderOpen className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
         ) : null}
         {onOpenAnalytics ? (
-          <button
-            type="button"
-            className="ui-btn-icon ui-btn-icon-xs"
-            onClick={onOpenAnalytics}
-            title="Analytics"
-            aria-label="Open analytics"
-          >
-            <BarChart2 className="h-3.5 w-3.5" />
-          </button>
+          <Tooltip text="System monitor & analytics" side="bottom">
+            <button
+              type="button"
+              className="ui-btn-icon ui-btn-icon-xs"
+              onClick={onOpenAnalytics}
+              aria-label="Open analytics"
+            >
+              <BarChart2 className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
         ) : null}
         {/* gateway status pill */}
         <span

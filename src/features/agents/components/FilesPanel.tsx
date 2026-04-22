@@ -58,36 +58,42 @@ function FileRow({
           {formatBytes(file.sizeBytes)} · {formatDate(file.createdAt)}
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="flex shrink-0 items-center gap-1">
+        {/* favorite star: always visible, colored when active */}
         <button
           type="button"
           className="ui-btn-icon ui-btn-icon-xs"
           onClick={onToggleFavorite}
-          aria-label={file.favorite ? "Unpin" : "Pin"}
-          title={file.favorite ? "Unpin" : "Pin"}
+          aria-label={file.favorite ? "Remove from favorites" : "Add to favorites"}
+          title={file.favorite ? "Remove from favorites" : "Add to favorites"}
         >
           <Star
-            className={`h-3.5 w-3.5 ${file.favorite ? "text-yellow-400 fill-yellow-400" : "text-white/40"}`}
+            className={`h-3.5 w-3.5 transition-colors ${
+              file.favorite ? "text-yellow-400 fill-yellow-400" : "text-white/25 hover:text-yellow-400"
+            }`}
           />
         </button>
-        <button
-          type="button"
-          className="ui-btn-icon ui-btn-icon-xs"
-          onClick={onDownload}
-          aria-label="Download"
-          title="Download"
-        >
-          <Download className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          className="ui-btn-icon ui-btn-icon-xs"
-          onClick={onDelete}
-          aria-label="Delete"
-          title="Delete"
-        >
-          <Trash2 className="h-3.5 w-3.5 text-red-400/70" />
-        </button>
+        {/* download + delete only on hover (desktop) / always visible touch */}
+        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 @touch:opacity-100">
+          <button
+            type="button"
+            className="ui-btn-icon ui-btn-icon-xs"
+            onClick={onDownload}
+            aria-label="Download file"
+            title="Download"
+          >
+            <Download className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            className="ui-btn-icon ui-btn-icon-xs"
+            onClick={onDelete}
+            aria-label="Delete file"
+            title="Delete"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-red-400/70" />
+          </button>
+        </div>
       </div>
     </div>
   );

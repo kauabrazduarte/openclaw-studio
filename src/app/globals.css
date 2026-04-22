@@ -1322,3 +1322,91 @@ textarea:focus::-webkit-scrollbar {
     gap: 0.375rem;
   }
 }
+
+/* ── global chat content overflow protection ─────────────────────────────── */
+[data-agent-panel] .agent-markdown,
+[data-agent-panel] .ui-chat-assistant-card {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+  max-width: 100%;
+}
+
+[data-agent-panel] .agent-markdown pre {
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* prevent any child from blowing out the panel width */
+[data-agent-panel] {
+  overflow: hidden;
+  min-width: 0;
+}
+
+[data-agent-panel] > * {
+  min-width: 0;
+}
+
+/* ── mobile agent panel layout ───────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* composer outer wrapper */
+  [data-agent-panel] .rounded-2xl {
+    border-radius: 16px;
+  }
+
+  /* keep model select from overflowing on narrow screens */
+  [data-agent-panel] select.ui-input {
+    max-width: 42vw !important;
+    font-size: 10px;
+  }
+
+  /* composer toolbar – wrap tightly */
+  [data-agent-panel] .composer-toolbar {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    justify-content: flex-start;
+  }
+
+  /* agent name header row */
+  .type-agent-name {
+    font-size: 13px;
+  }
+}
+
+/* ── toggle button active indicators ────────────────────────────────────── */
+/* Active state pill for switch-role buttons */
+button[role="switch"][aria-checked="true"] {
+  border-color: rgba(255 255 255 / 0.35) !important;
+  background: rgba(255 255 255 / 0.12) !important;
+  color: #fafafa !important;
+}
+
+button[role="switch"][aria-checked="false"] {
+  opacity: 0.65;
+}
+
+button[role="switch"]:hover {
+  opacity: 1;
+}
+
+/* Attachment + MD preview active highlight */
+.btn-active-indicator {
+  background: rgba(255 255 255 / 0.12) !important;
+  color: #fafafa !important;
+  border-color: rgba(255 255 255 / 0.25) !important;
+}
+
+/* ── tooltip ──────────────────────────────────────────────────────────────── */
+/* Ensures tooltips are never clipped */
+.ui-topbar,
+[data-agent-panel] {
+  overflow: visible;
+}
+
+/* ── file vault drawer full-width on mobile ──────────────────────────────── */
+@media (max-width: 480px) {
+  .files-panel-drawer {
+    max-width: 100%;
+  }
+}

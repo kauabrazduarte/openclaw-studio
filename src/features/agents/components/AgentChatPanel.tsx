@@ -1270,66 +1270,74 @@ const AgentChatComposer = memo(function AgentChatComposer({
         </div>
         <div className="composer-toolbar flex w-full flex-wrap items-center justify-end gap-1.5 text-[10px] text-muted-foreground sm:ml-auto sm:w-auto sm:flex-nowrap">
           {/* attach file button */}
-          <button
-            type="button"
-            className={`ui-btn-icon ui-btn-icon-xs ${attachedFiles.length > 0 ? "text-foreground" : ""}`}
-            title="Attach file"
-            aria-label="Attach file"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Paperclip className="h-3.5 w-3.5" />
-          </button>
-          {/* md preview toggle */}
-          <button
-            type="button"
-            className={`ui-btn-icon ui-btn-icon-xs ${mdPreview ? "text-foreground bg-white/10" : ""}`}
-            title="Preview markdown"
-            aria-label="Toggle markdown preview"
-            onClick={onMdPreviewToggle}
-          >
-            <FileText className="h-3.5 w-3.5" />
-          </button>
-          {/* open files panel */}
-          {onOpenFilesPanel ? (
+          <InlineHoverTooltip text={attachedFiles.length > 0 ? `${attachedFiles.length} file(s) attached` : "Attach files to message"}>
             <button
               type="button"
-              className="ui-btn-icon ui-btn-icon-xs"
-              title="File vault"
-              aria-label="Open file vault"
-              onClick={onOpenFilesPanel}
+              className={`ui-btn-icon ui-btn-icon-xs ${attachedFiles.length > 0 ? "btn-active-indicator" : ""}`}
+              aria-label="Attach file"
+              onClick={() => fileInputRef.current?.click()}
             >
-              <FolderOpen className="h-3.5 w-3.5" />
+              <Paperclip className="h-3.5 w-3.5" />
             </button>
+          </InlineHoverTooltip>
+          {/* md preview toggle */}
+          <InlineHoverTooltip text={mdPreview ? "Hide markdown preview" : "Preview markdown as rendered"}>
+            <button
+              type="button"
+              className={`ui-btn-icon ui-btn-icon-xs ${mdPreview ? "btn-active-indicator" : ""}`}
+              role="switch"
+              aria-checked={mdPreview}
+              aria-label="Toggle markdown preview"
+              onClick={onMdPreviewToggle}
+            >
+              <FileText className="h-3.5 w-3.5" />
+            </button>
+          </InlineHoverTooltip>
+          {/* open files panel */}
+          {onOpenFilesPanel ? (
+            <InlineHoverTooltip text="Open file vault">
+              <button
+                type="button"
+                className="ui-btn-icon ui-btn-icon-xs"
+                aria-label="Open file vault"
+                onClick={onOpenFilesPanel}
+              >
+                <FolderOpen className="h-3.5 w-3.5" />
+              </button>
+            </InlineHoverTooltip>
           ) : null}
-          <span className="font-mono tracking-[0.02em]">Show</span>
-          <button
-            type="button"
-            role="switch"
-            aria-label="Show tool calls"
-            aria-checked={toolCallingEnabled}
-            className={`inline-flex h-5 shrink-0 items-center rounded-sm border px-1.5 font-mono text-[10px] tracking-[0.01em] transition ${
-              toolCallingEnabled
-                ? "border-primary/45 bg-primary/14 text-foreground"
-                : "border-border/70 bg-surface-2/40 text-muted-foreground hover:text-foreground"
-            }`}
-            onClick={() => onToolCallingToggle(!toolCallingEnabled)}
-          >
-            Tools
-          </button>
-          <button
-            type="button"
-            role="switch"
-            aria-label="Show thinking"
-            aria-checked={showThinkingTraces}
-            className={`inline-flex h-5 shrink-0 items-center rounded-sm border px-1.5 font-mono text-[10px] tracking-[0.01em] transition ${
-              showThinkingTraces
-                ? "border-primary/45 bg-primary/14 text-foreground"
-                : "border-border/70 bg-surface-2/40 text-muted-foreground hover:text-foreground"
-            }`}
-            onClick={() => onThinkingTracesToggle(!showThinkingTraces)}
-          >
-            Thinking
-          </button>
+          <InlineHoverTooltip text={toolCallingEnabled ? "Tool calls shown in transcript (click to hide)" : "Show tool calls in transcript"}>
+            <button
+              type="button"
+              role="switch"
+              aria-label="Show tool calls"
+              aria-checked={toolCallingEnabled}
+              className={`inline-flex h-5 shrink-0 items-center rounded-sm border px-1.5 font-mono text-[10px] tracking-[0.01em] transition ${
+                toolCallingEnabled
+                  ? "border-primary/45 bg-primary/14 text-foreground"
+                  : "border-border/70 bg-surface-2/40 text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={() => onToolCallingToggle(!toolCallingEnabled)}
+            >
+              Tools
+            </button>
+          </InlineHoverTooltip>
+          <InlineHoverTooltip text={showThinkingTraces ? "Thinking traces visible (click to hide)" : "Show agent thinking traces"}>
+            <button
+              type="button"
+              role="switch"
+              aria-label="Show thinking"
+              aria-checked={showThinkingTraces}
+              className={`inline-flex h-5 shrink-0 items-center rounded-sm border px-1.5 font-mono text-[10px] tracking-[0.01em] transition ${
+                showThinkingTraces
+                  ? "border-primary/45 bg-primary/14 text-foreground"
+                  : "border-border/70 bg-surface-2/40 text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={() => onThinkingTracesToggle(!showThinkingTraces)}
+            >
+              Thinking
+            </button>
+          </InlineHoverTooltip>
         </div>
       </div>
     </div>
