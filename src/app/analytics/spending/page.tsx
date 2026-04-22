@@ -73,7 +73,7 @@ export default function SpendingPage() {
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         {/* header */}
         <div className="mb-6 flex items-center gap-3">
-          <Link href="/analytics" className="ui-btn-icon ui-btn-icon-xs" aria-label="Back to analytics">
+          <Link href="/studio/analytics" className="ui-btn-icon ui-btn-icon-xs" aria-label="Back to analytics">
             <ArrowLeft className="h-3.5 w-3.5" />
           </Link>
           <div>

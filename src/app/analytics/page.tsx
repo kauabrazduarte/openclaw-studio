@@ -135,7 +135,7 @@ export default function AnalyticsPage() {
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
         {/* header */}
         <div className="mb-6 flex items-center gap-3">
-          <Link href="/" className="ui-btn-icon ui-btn-icon-xs" aria-label="Back">
+          <Link href="/studio" className="ui-btn-icon ui-btn-icon-xs" aria-label="Back">
             <ArrowLeft className="h-3.5 w-3.5" />
           </Link>
           <div>
@@ -304,7 +304,7 @@ export default function AnalyticsPage() {
 
         <div className="flex justify-end">
           <Link
-            href="/analytics/spending"
+            href="/studio/analytics/spending"
             className="ui-btn-secondary px-4 py-2 font-mono text-[12px] font-medium tracking-[0.04em]"
           >
             View spending estimates →
