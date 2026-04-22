@@ -19,10 +19,8 @@ type AgentEditModalProps = {
 };
 
 function resolveInitialEmoji(seed: string): string {
-  // Try to find an exact emoji match in seed
   const found = AGENT_EMOJIS.find((e) => e === seed);
   if (found) return found;
-  // Fall back to hash-based selection (same as AgentAvatar)
   let h = 0;
   for (let i = 0; i < seed.length; i++) {
     h = (Math.imul(31, h) + seed.charCodeAt(i)) >>> 0;
@@ -44,7 +42,6 @@ export const AgentEditModal = ({
   );
   const [description, setDescription] = useState("");
 
-  // Load persisted description on mount / agentId change
   useEffect(() => {
     try {
       const saved = localStorage.getItem(`ocs_agent_desc_${agentId}`);
@@ -54,7 +51,6 @@ export const AgentEditModal = ({
     }
   }, [agentId]);
 
-  // Sync name/seed when props change
   useEffect(() => {
     setName(currentName);
     setSelectedEmoji(resolveInitialEmoji(currentAvatarSeed));
@@ -82,26 +78,26 @@ export const AgentEditModal = ({
       }}
     >
       <div className="ui-panel w-full max-w-lg overflow-hidden rounded-2xl">
-        {/* header */}
+        {/* cabeçalho */}
         <div
           className="flex items-center justify-between border-b px-5 py-3"
           style={{ borderColor: "#27272a" }}
         >
           <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white/50">
-            Edit agent
+            Editar agente
           </span>
           <button
             type="button"
             className="ui-btn-icon ui-btn-icon-xs"
             onClick={onClose}
-            aria-label="Close"
+            aria-label="Fechar"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
 
         <div className="px-5 py-5">
-          {/* emoji preview */}
+          {/* pré-visualização do emoji */}
           <div className="mb-4 flex justify-center">
             <div
               className="agent-emoji-avatar"
@@ -111,7 +107,7 @@ export const AgentEditModal = ({
             </div>
           </div>
 
-          {/* emoji grid */}
+          {/* grade de emojis */}
           <div className="mb-4 grid grid-cols-6 gap-1 sm:grid-cols-6" style={{ gridTemplateColumns: "repeat(6, 1fr)" }}>
             {AGENT_EMOJIS.map((emoji) => {
               const isSelected = emoji === selectedEmoji;
@@ -134,44 +130,44 @@ export const AgentEditModal = ({
             })}
           </div>
 
-          {/* name field */}
+          {/* campo nome */}
           <div className="mb-3">
             <label className="mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-white/40">
-              Name
+              Nome
             </label>
             <input
               type="text"
               className="ui-input w-full rounded-lg px-3 py-2 text-[14px] text-foreground"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Agent name"
+              placeholder="Nome do agente"
               maxLength={80}
             />
           </div>
 
-          {/* description field */}
+          {/* campo descrição */}
           <div className="mb-5">
             <label className="mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-white/40">
-              Description
+              Descrição
             </label>
             <textarea
               className="ui-input w-full rounded-lg px-3 py-2 text-[14px] text-foreground resize-none"
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe what this agent does..."
+              placeholder="Descreva o que esse agente faz..."
               maxLength={500}
             />
           </div>
 
-          {/* actions */}
+          {/* ações */}
           <div className="flex items-center justify-end gap-2">
             <button
               type="button"
               className="ui-btn-secondary px-4 py-2 font-mono text-[12px] font-medium tracking-[0.04em]"
               onClick={onClose}
             >
-              Cancel
+              Cancelar
             </button>
             <button
               type="button"
@@ -179,7 +175,7 @@ export const AgentEditModal = ({
               onClick={handleSave}
               disabled={!name.trim()}
             >
-              Save
+              Salvar
             </button>
           </div>
         </div>

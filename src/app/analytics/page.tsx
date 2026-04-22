@@ -135,7 +135,7 @@ export default function AnalyticsPage() {
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
         {/* header */}
         <div className="mb-6 flex items-center gap-3">
-          <Link href="/studio" className="ui-btn-icon ui-btn-icon-xs" aria-label="Back">
+          <Link href="/studio" className="ui-btn-icon ui-btn-icon-xs" aria-label="Voltar">
             <ArrowLeft className="h-3.5 w-3.5" />
           </Link>
           <div>
@@ -143,13 +143,13 @@ export default function AnalyticsPage() {
               OpenClaw Studio
             </div>
             <h1 className="mt-0.5 font-mono text-[18px] font-bold uppercase tracking-[0.08em] text-white/90 flex items-center gap-2">
-              <Activity className="h-5 w-5" /> System Monitor
+              <Activity className="h-5 w-5" /> Monitor do Sistema
             </h1>
           </div>
           <div className="ml-auto flex items-center gap-2">
             {metrics && (
               <span className="font-mono text-[10px] text-white/30">
-                Updated {new Date(metrics.timestamp).toLocaleTimeString()}
+                Atualizado {new Date(metrics.timestamp).toLocaleTimeString()}
               </span>
             )}
             <span
@@ -172,7 +172,7 @@ export default function AnalyticsPage() {
               <span className="font-mono text-[11px] text-white/60">{metrics.hostname}</span>
             </div>
             <div className="flex items-center gap-2 rounded-lg border border-white/8 bg-white/4 px-3 py-1.5">
-              <span className="font-mono text-[11px] text-white/40">uptime</span>
+              <span className="font-mono text-[11px] text-white/40">atividade</span>
               <span className="font-mono text-[11px] text-white/70">{formatUptime(metrics.uptime)}</span>
             </div>
             <div
@@ -190,7 +190,7 @@ export default function AnalyticsPage() {
               </span>
             </div>
             <div className="flex items-center gap-2 rounded-lg border border-white/8 bg-white/4 px-3 py-1.5">
-              <span className="font-mono text-[11px] text-white/40">load</span>
+              <span className="font-mono text-[11px] text-white/40">carga</span>
               <span className="font-mono text-[11px] text-white/70">
                 {metrics.load.map((l) => l.toFixed(2)).join(" · ")}
               </span>
@@ -209,7 +209,7 @@ export default function AnalyticsPage() {
           />
           <StatCard
             icon={<MemoryStick className="h-3.5 w-3.5" />}
-            label="Memory"
+            label="Memória"
             value={metrics ? `${metrics.memory.percent}%` : "—"}
             sub={metrics ? `${formatBytes(metrics.memory.used)} / ${formatBytes(metrics.memory.total)}` : undefined}
             gauge={metrics?.memory.percent}
@@ -217,7 +217,7 @@ export default function AnalyticsPage() {
           />
           <StatCard
             icon={<HardDrive className="h-3.5 w-3.5" />}
-            label="Disk"
+            label="Disco"
             value={metrics ? `${metrics.disk.percent}%` : "—"}
             sub={metrics ? `${formatBytes(metrics.disk.used)} / ${formatBytes(metrics.disk.total)}` : undefined}
             gauge={metrics?.disk.percent}
@@ -225,9 +225,9 @@ export default function AnalyticsPage() {
           />
           <StatCard
             icon={<Database className="h-3.5 w-3.5" />}
-            label="Messages today"
+            label="Mensagens hoje"
             value={String(eventsToday)}
-            sub={`${uniqueAgents} active agent${uniqueAgents !== 1 ? "s" : ""}`}
+            sub={`${uniqueAgents} agente${uniqueAgents !== 1 ? "s" : ""} ativo${uniqueAgents !== 1 ? "s" : ""}`}
           />
           <StatCard
             icon={<Zap className="h-3.5 w-3.5" />}
@@ -237,9 +237,9 @@ export default function AnalyticsPage() {
           />
           <StatCard
             icon={<Activity className="h-3.5 w-3.5" />}
-            label="Total events"
+            label="Total de eventos"
             value={String(events.length)}
-            sub={`All time`}
+            sub="Total acumulado"
           />
         </div>
 
@@ -249,14 +249,14 @@ export default function AnalyticsPage() {
             <div className="flex items-center gap-2 border-b px-5 py-3" style={{ borderColor: "#27272a" }}>
               <Activity className="h-3.5 w-3.5 text-white/40" />
               <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-white/40">
-                Top Processes
+                Principais processos
               </span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b text-left" style={{ borderColor: "#1f1f1f" }}>
-                    {["PID", "Name", "CPU %", "MEM %"].map((h) => (
+                    {["PID", "Nome", "CPU %", "MEM %"].map((h) => (
                       <th
                         key={h}
                         className="px-4 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-white/25"
@@ -307,7 +307,7 @@ export default function AnalyticsPage() {
             href="/studio/analytics/spending"
             className="ui-btn-secondary px-4 py-2 font-mono text-[12px] font-medium tracking-[0.04em]"
           >
-            View spending estimates →
+            Ver estimativas de gastos →
           </Link>
         </div>
       </div>

@@ -12,41 +12,41 @@ const REASONING_LEVELS: Array<{
 }> = [
   {
     value: "",
-    label: "Default",
-    description: "Uses the model's built-in reasoning behavior. Recommended for most tasks.",
+    label: "Padrão",
+    description: "Usa o comportamento de raciocínio nativo do modelo. Recomendado para a maioria das tarefas.",
   },
   {
     value: "off",
-    label: "Off",
-    description: "Disables extended thinking entirely. Fastest and cheapest — best for simple Q&A or instructions.",
+    label: "Desligado",
+    description: "Desativa o raciocínio estendido completamente. Mais rápido e barato — ideal para perguntas simples ou instruções diretas.",
   },
   {
     value: "minimal",
-    label: "Minimal",
-    description: "A brief reasoning pass before responding. Good for light tasks where a small amount of deliberation helps.",
+    label: "Mínimo",
+    description: "Uma rápida passagem de raciocínio antes de responder. Bom para tarefas leves onde uma pequena deliberação ajuda.",
   },
   {
     value: "low",
-    label: "Low",
-    description: "Low-effort reasoning. Useful for straightforward coding, writing, and structured tasks.",
+    label: "Baixo",
+    description: "Raciocínio de baixo esforço. Útil para codificação direta, escrita e tarefas estruturadas.",
   },
   {
     value: "medium",
-    label: "Medium",
-    description: "Balanced reasoning. A solid general-purpose level for analysis, debugging, and creative tasks.",
-    badge: "Balanced",
+    label: "Médio",
+    description: "Raciocínio equilibrado. Um bom nível geral para análise, depuração e tarefas criativas.",
+    badge: "Equilibrado",
   },
   {
     value: "high",
-    label: "High",
-    description: "Deep reasoning pass. Best for complex logic, multi-step planning, and hard coding problems.",
-    badge: "Thorough",
+    label: "Alto",
+    description: "Raciocínio profundo. Ideal para lógica complexa, planejamento em múltiplas etapas e problemas difíceis de código.",
+    badge: "Detalhado",
   },
   {
     value: "xhigh",
-    label: "XHigh",
-    description: "Maximum reasoning budget. Slowest and most expensive — reserved for the hardest problems.",
-    badge: "Max",
+    label: "Máximo",
+    description: "Orçamento máximo de raciocínio. Mais lento e caro — reservado para os problemas mais difíceis.",
+    badge: "Máx",
   },
 ];
 
@@ -77,7 +77,7 @@ export const ReasoningModal = ({
         className="ui-panel flex w-full max-w-md flex-col overflow-hidden rounded-2xl"
         style={{ maxHeight: "80vh" }}
       >
-        {/* header */}
+        {/* cabeçalho */}
         <div
           className="flex shrink-0 items-center justify-between border-b px-5 py-3"
           style={{ borderColor: "#27272a" }}
@@ -85,28 +85,28 @@ export const ReasoningModal = ({
           <div className="flex items-center gap-2">
             <Brain className="h-3.5 w-3.5 text-white/40" />
             <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white/50">
-              Reasoning effort
+              Nível de raciocínio
             </span>
           </div>
           <button
             type="button"
             className="ui-btn-icon ui-btn-icon-xs"
             onClick={onClose}
-            aria-label="Close"
+            aria-label="Fechar"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
 
-        {/* description */}
+        {/* descrição */}
         <div className="shrink-0 border-b px-5 py-3" style={{ borderColor: "#27272a" }}>
           <p className="font-mono text-[10px] text-white/35 leading-relaxed">
-            Controls how much the model "thinks" before responding. Higher effort = deeper reasoning,
-            more compute, longer wait. Lower = faster, cheaper.
+            Controla o quanto o modelo "pensa" antes de responder. Maior esforço = raciocínio mais profundo,
+            mais processamento, espera maior. Menor = mais rápido e barato.
           </p>
         </div>
 
-        {/* levels */}
+        {/* níveis */}
         <div className="ui-scroll min-h-0 flex-1 overflow-y-auto p-2">
           <div className="flex flex-col gap-0.5">
             {REASONING_LEVELS.map((level) => {

@@ -348,7 +348,7 @@ const AgentStudioPage = () => {
     if (focusedAgent.status !== "running") return null;
     const lastMessage = focusedAgent.lastUserMessage?.trim() ?? "";
     if (!lastMessage || !isHeartbeatPrompt(lastMessage)) return null;
-    return "This task is running as an automatic heartbeat check. Stopping heartbeat runs from Studio isn't available yet (coming soon).";
+    return "Esta tarefa está sendo executada como uma verificação automática. Parar execuções de heartbeat pelo Studio ainda não está disponível (em breve).";
   }, [focusedAgent]);
   const inspectSidebarAgentId = inspectSidebar?.agentId ?? null;
   const inspectSidebarTab = inspectSidebar?.tab ?? null;
@@ -928,7 +928,7 @@ const AgentStudioPage = () => {
     setPersonalityHasUnsavedChanges,
     push: router.push,
     replace: router.replace,
-    confirmDiscard: () => window.confirm("Discard changes?"),
+    confirmDiscard: () => window.confirm("Descartar alterações?"),
   });
   const handleOpenCreateAgentModal = useCallback(() => {
     if (createAgentBusy) return;
@@ -1080,7 +1080,7 @@ const AgentStudioPage = () => {
       setCreateAgentBlock(null);
       setCreateAgentModalOpen(false);
       void loadAgents();
-      setError("Agent creation timed out.");
+      setError("Criação do agente expirou.");
     };
     if (timeoutNow) {
       handleTimeout();
@@ -1326,19 +1326,19 @@ const AgentStudioPage = () => {
   const connectionPanelVisible = showConnectionPanel;
   const hasAnyAgents = agents.length > 0;
   const configMutationStatusLine = activeConfigMutation
-    ? `Applying config change: ${activeConfigMutation.label}`
+    ? `Aplicando alteração: ${activeConfigMutation.label}`
     : queuedConfigMutationCount > 0
       ? queuedBlockedByRunningAgents
-        ? `Queued ${queuedConfigMutationCount} config change${queuedConfigMutationCount === 1 ? "" : "s"}; waiting for ${runningAgentCount} running agent${runningAgentCount === 1 ? "" : "s"} to finish`
+        ? `${queuedConfigMutationCount} alteraç${queuedConfigMutationCount === 1 ? "ão" : "ões"} na fila; aguardando ${runningAgentCount} agente${runningAgentCount === 1 ? "" : "s"} finalizar${runningAgentCount === 1 ? "" : "em"}`
         : !gatewayConnected
-          ? `Queued ${queuedConfigMutationCount} config change${queuedConfigMutationCount === 1 ? "" : "s"}; waiting for gateway connection`
-          : `Queued ${queuedConfigMutationCount} config change${queuedConfigMutationCount === 1 ? "" : "s"}`
+          ? `${queuedConfigMutationCount} alteraç${queuedConfigMutationCount === 1 ? "ão" : "ões"} na fila; aguardando conexão com o gateway`
+          : `${queuedConfigMutationCount} alteraç${queuedConfigMutationCount === 1 ? "ão" : "ões"} na fila`
       : null;
   const createBlockStatusLine = createAgentBlock
     ? createAgentBlock.phase === "queued"
-      ? "Waiting for active runs to finish"
+      ? "Aguardando execuções ativas finalizarem"
       : createAgentBlock.phase === "creating"
-      ? "Submitting config change"
+      ? "Enviando alteração de configuração"
       : null
     : null;
   const restartingMutationStatusLine = resolveConfigMutationStatusLine({
@@ -1357,13 +1357,13 @@ const AgentStudioPage = () => {
     : null;
   const restartingMutationAriaLabel = restartingMutationBlock
     ? restartingMutationBlock.kind === "delete-agent"
-      ? "Deleting agent and restarting gateway"
-      : "Renaming agent and restarting gateway"
+      ? "Excluindo agente e reiniciando gateway"
+      : "Renomeando agente e reiniciando gateway"
     : null;
   const restartingMutationHeading = restartingMutationBlock
     ? restartingMutationBlock.kind === "delete-agent"
-      ? "Agent delete in progress"
-      : "Agent rename in progress"
+      ? "Exclusão de agente em andamento"
+      : "Renomeação de agente em andamento"
     : null;
 
   useEffect(() => {
@@ -1392,14 +1392,14 @@ const AgentStudioPage = () => {
               OpenClaw Studio
             </div>
             <div className="mt-3 text-sm text-muted-foreground">
-              {gatewayConnecting ? "Connecting to gateway…" : "Booting Studio…"}
+              {gatewayConnecting ? "Conectando ao gateway…" : "Iniciando Studio…"}
             </div>
             <button
               type="button"
               className="ui-btn-secondary mt-4 px-4 py-2 text-xs font-semibold tracking-[0.05em] text-foreground"
               onClick={() => setShowConnectSetup(true)}
             >
-              Edit connection settings
+              Editar configurações de conexão
             </button>
           </div>
         </div>
@@ -1423,7 +1423,7 @@ const AgentStudioPage = () => {
                   className="ui-btn-secondary px-3 py-1.5 font-mono text-[10px] font-semibold tracking-[0.06em]"
                   onClick={handleBackToChat}
                 >
-                  Back to chat
+                  Voltar ao chat
                 </button>
               </div>
             ) : null}
@@ -1464,7 +1464,7 @@ const AgentStudioPage = () => {
             <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               OpenClaw Studio
             </div>
-            <div className="mt-3 text-sm text-muted-foreground">Loading agents…</div>
+            <div className="mt-3 text-sm text-muted-foreground">Carregando agentes…</div>
           </div>
         </div>
       </div>
@@ -1476,7 +1476,7 @@ const AgentStudioPage = () => {
       {state.loading ? (
         <div className="pointer-events-none fixed bottom-4 left-0 right-0 z-50 flex justify-center px-3">
           <div className="glass-panel ui-card px-6 py-3 font-mono text-[11px] tracking-[0.08em] text-muted-foreground">
-            Loading agents…
+            Carregando agentes…
           </div>
         </div>
       ) : null}
@@ -1561,16 +1561,16 @@ const AgentStudioPage = () => {
                     className="ui-btn-secondary w-full px-3 py-1.5 font-mono text-[10px] font-semibold tracking-[0.06em]"
                     onClick={handleBackToChat}
                   >
-                    Back to chat
+                    Voltar ao chat
                   </button>
                 </div>
                 <nav className="py-3">
                   {(
                     [
-                      { id: "personality", label: "Behavior" },
-                      { id: "capabilities", label: "Capabilities" },
-                      { id: "automations", label: "Automations" },
-                      { id: "advanced", label: "Advanced" },
+                      { id: "personality", label: "Comportamento" },
+                      { id: "capabilities", label: "Capacidades" },
+                      { id: "automations", label: "Automações" },
+                      { id: "advanced", label: "Avançado" },
                     ] as const
                   ).map((entry) => {
                     const active = effectiveSettingsTab === entry.id;
@@ -1603,16 +1603,16 @@ const AgentStudioPage = () => {
                 <div className="flex items-start justify-between border-b border-border/60 px-6 py-4">
                   <div>
                     <div className="text-lg font-semibold text-foreground">
-                      {inspectSidebarAgent?.name ?? settingsRouteAgentId ?? "Agent settings"}
+                      {inspectSidebarAgent?.name ?? settingsRouteAgentId ?? "Configurações do agente"}
                     </div>
                     <div className="mt-1 font-mono text-[11px] text-muted-foreground">
-                      Model: {settingsHeaderModel}{" "}
+                      Modelo: {settingsHeaderModel}{" "}
                       <span className="mx-2 text-border">|</span>
-                      Thinking: {settingsHeaderThinking}
+                      Raciocínio: {settingsHeaderThinking}
                     </div>
                   </div>
                   <div className="rounded-md border border-border/70 bg-surface-1 px-3 py-1 font-mono text-[11px] text-muted-foreground">
-                    [{personalityHasUnsavedChanges ? "Unsaved" : "Saved ✓"}]
+                    [{personalityHasUnsavedChanges ? "Não salvo" : "Salvo ✓"}]
                   </div>
                 </div>
                 <div className="min-h-0 flex-1 overflow-hidden">
@@ -1672,8 +1672,8 @@ const AgentStudioPage = () => {
                     )
                   ) : (
                     <EmptyStatePanel
-                      title="Agent not found."
-                      description="Back to chat and select an available agent."
+                      title="Agente não encontrado."
+                      description="Volte ao chat e selecione um agente disponível."
                       fillHeight
                       className="items-center p-6 text-center text-sm"
                     />
@@ -1705,7 +1705,7 @@ const AgentStudioPage = () => {
                     data-active={mobilePane === "fleet" ? "true" : "false"}
                     onClick={() => setMobilePane("fleet")}
                   >
-                    Fleet
+                    Frota
                   </button>
                   <button
                     type="button"
@@ -1798,7 +1798,7 @@ const AgentStudioPage = () => {
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
                     <span className="text-4xl">🐉</span>
-                    <p className="font-mono text-[12px] text-white/30">Select an agent from the sidebar</p>
+                    <p className="font-mono text-[12px] text-white/30">Selecione um agente na barra lateral</p>
                   </div>
                 )}
               </div>
@@ -1849,17 +1849,17 @@ const AgentStudioPage = () => {
           data-testid="agent-create-restart-modal"
           role="dialog"
           aria-modal="true"
-          aria-label="Creating agent"
+          aria-label="Criando agente"
         >
           <div className="ui-panel w-full max-w-md p-6">
             <div className="font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
-              Agent create in progress
+              Criação de agente em andamento
             </div>
             <div className="mt-2 text-base font-semibold text-foreground">
               {createAgentBlock.agentName}
             </div>
             <div className="mt-3 text-sm text-muted-foreground">
-              Studio is temporarily locked until creation finishes.
+              O Studio está temporariamente bloqueado até a criação ser concluída.
             </div>
             {createBlockStatusLine ? (
               <div className="ui-card mt-4 px-3 py-2 font-mono text-[11px] tracking-[0.06em] text-foreground">
@@ -1885,7 +1885,7 @@ const AgentStudioPage = () => {
               {restartingMutationBlock.agentName}
             </div>
             <div className="mt-3 text-sm text-muted-foreground">
-              Studio is temporarily locked until the gateway restarts.
+              O Studio está temporariamente bloqueado até o gateway reiniciar.
             </div>
             {restartingMutationStatusLine ? (
               <div className="ui-card mt-4 px-3 py-2 font-mono text-[11px] tracking-[0.06em] text-foreground">

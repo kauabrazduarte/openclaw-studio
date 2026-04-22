@@ -73,16 +73,16 @@ export default function SpendingPage() {
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         {/* header */}
         <div className="mb-6 flex items-center gap-3">
-          <Link href="/studio/analytics" className="ui-btn-icon ui-btn-icon-xs" aria-label="Back to analytics">
+          <Link href="/studio/analytics" className="ui-btn-icon ui-btn-icon-xs" aria-label="Voltar para análises">
             <ArrowLeft className="h-3.5 w-3.5" />
           </Link>
           <div>
             <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35">
-              Analytics
+              Análises
             </div>
             <h1 className="mt-0.5 flex items-center gap-2 font-mono text-[18px] font-bold uppercase tracking-[0.08em] text-white/90">
               <DollarSign className="h-5 w-5" />
-              Spending Estimates
+              Estimativas de Gastos
             </h1>
           </div>
         </div>
@@ -93,9 +93,9 @@ export default function SpendingPage() {
           style={{ borderColor: "#3f3f46", background: "#18181b" }}
         >
           <p className="font-mono text-[11px] text-white/40">
-            Estimates only. Calculated at ~{EST_INPUT_TOKENS} input tokens + ~{EST_OUTPUT_TOKENS}{" "}
-            output tokens per message event. Actual costs depend on your real usage and model
-            provider pricing.
+            Apenas estimativas. Calculado em ~{EST_INPUT_TOKENS} tokens de entrada + ~{EST_OUTPUT_TOKENS}{" "}
+            tokens de saída por evento de mensagem. Os custos reais dependem do seu uso e da
+            precificação do provedor do modelo.
           </p>
         </div>
 
@@ -103,7 +103,7 @@ export default function SpendingPage() {
         <div className="mb-6 grid grid-cols-2 gap-3">
           <div className="ui-card px-4 py-3">
             <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-white/35">
-              Total estimated spend
+              Gasto estimado total
             </p>
             <p className="mt-1 font-mono text-2xl font-bold text-white/90">
               {formatCost(totalCost)}
@@ -111,7 +111,7 @@ export default function SpendingPage() {
           </div>
           <div className="ui-card px-4 py-3">
             <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-white/35">
-              Messages tracked
+              Mensagens rastreadas
             </p>
             <p className="mt-1 font-mono text-2xl font-bold text-white/90">{totalMessages}</p>
           </div>
@@ -122,20 +122,20 @@ export default function SpendingPage() {
           <div className="ui-card overflow-hidden">
             <div className="border-b px-5 py-3" style={{ borderColor: "#27272a" }}>
               <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-white/40">
-                Breakdown by model
+                Distribuição por modelo
               </p>
             </div>
             <table className="w-full">
               <thead>
                 <tr className="border-b text-left" style={{ borderColor: "#27272a" }}>
                   <th className="px-5 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-white/30">
-                    Model
+                    Modelo
                   </th>
                   <th className="px-5 py-2 text-right font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-white/30">
-                    Messages
+                    Mensagens
                   </th>
                   <th className="px-5 py-2 text-right font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-white/30">
-                    Est. cost
+                    Custo est.
                   </th>
                 </tr>
               </thead>
@@ -163,7 +163,7 @@ export default function SpendingPage() {
         ) : (
           <div className="ui-card px-5 py-8 text-center">
             <p className="font-mono text-[12px] text-white/30">
-              No spending data yet. Send some messages to track estimated costs.
+              Sem dados de gastos ainda. Envie mensagens para rastrear os custos estimados.
             </p>
           </div>
         )}

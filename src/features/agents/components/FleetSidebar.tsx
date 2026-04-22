@@ -22,9 +22,9 @@ type FleetSidebarProps = {
 };
 
 const FILTER_OPTIONS: Array<{ value: FocusFilter; label: string; testId: string }> = [
-  { value: "all", label: "All", testId: "fleet-filter-all" },
-  { value: "running", label: "Running", testId: "fleet-filter-running" },
-  { value: "approvals", label: "Approvals", testId: "fleet-filter-approvals" },
+  { value: "all", label: "Todos", testId: "fleet-filter-all" },
+  { value: "running", label: "Em execução", testId: "fleet-filter-running" },
+  { value: "approvals", label: "Aprovações", testId: "fleet-filter-approvals" },
 ];
 
 export const FleetSidebar = ({
@@ -108,7 +108,7 @@ export const FleetSidebar = ({
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
         <div className="flex items-center gap-2">
           <span className="font-mono text-[11px] font-semibold tracking-[0.08em] text-white/40 uppercase">
-            Agents
+            Agentes
           </span>
           <span className="font-mono text-[11px] text-white/25">{agents.length}</span>
         </div>
@@ -118,10 +118,10 @@ export const FleetSidebar = ({
           className="ui-btn-icon ui-btn-icon-xs border border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/90 transition-colors"
           onClick={onCreateAgent}
           disabled={createDisabled || createBusy}
-          title="New agent"
+          title="Novo agente"
         >
           <Plus className="h-3.5 w-3.5" />
-          <span className="sr-only">{createBusy ? "Creating..." : "New agent"}</span>
+          <span className="sr-only">{createBusy ? "Criando..." : "Novo agente"}</span>
         </button>
       </div>
 
@@ -131,13 +131,13 @@ export const FleetSidebar = ({
           {runningCount > 0 && (
             <span className="agent-stat-chip agent-stat-chip--running">
               <Activity className="h-2.5 w-2.5" />
-              {runningCount} running
+              {runningCount} em execução
             </span>
           )}
           {approvalCount > 0 && (
             <span className="agent-stat-chip agent-stat-chip--approval">
               <Clock className="h-2.5 w-2.5" />
-              {approvalCount} pending
+              {approvalCount} pendente
             </span>
           )}
         </div>
@@ -151,7 +151,7 @@ export const FleetSidebar = ({
         />
         <input
           type="text"
-          placeholder="Search agents..."
+          placeholder="Buscar agentes..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="sidebar-search-input"
@@ -191,10 +191,10 @@ export const FleetSidebar = ({
           searchQuery ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <Search className="mb-2 h-5 w-5 text-white/15" />
-              <p className="text-xs text-white/30">No agents match &ldquo;{searchQuery}&rdquo;</p>
+              <p className="text-xs text-white/30">Nenhum agente encontrado para &ldquo;{searchQuery}&rdquo;</p>
             </div>
           ) : (
-            <EmptyStatePanel title="No agents available." compact className="p-3 text-xs" />
+            <EmptyStatePanel title="Nenhum agente disponível." compact className="p-3 text-xs" />
           )
         ) : (
           <div className="flex flex-col gap-1">
@@ -259,7 +259,7 @@ export const FleetSidebar = ({
                           className={`ui-badge ${NEEDS_APPROVAL_BADGE_CLASS}`}
                           data-status="approval"
                         >
-                          Needs approval
+                          Aguarda aprovação
                         </span>
                       ) : null}
                     </div>
@@ -269,7 +269,7 @@ export const FleetSidebar = ({
                       type="button"
                       className="ui-btn-icon ui-btn-icon-xs shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
                       aria-label={`Edit ${agent.name}`}
-                      title="Edit agent"
+                      title="Editar agente"
                       onClick={(e) => {
                         e.stopPropagation();
                         onEditAgent(agent.agentId);

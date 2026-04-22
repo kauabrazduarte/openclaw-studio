@@ -70,11 +70,11 @@ const MESSAGE_CONTENT_VISIBILITY_STYLE: CSSProperties = {
   containIntrinsicSize: "220px",
 };
 const EMPTY_CHAT_INTRO_MESSAGES = [
-  "How can I help you today?",
-  "What should we accomplish today?",
-  "Ready when you are. What do you want to tackle?",
-  "What are we working on today?",
-  "I'm here and ready. What's the plan?",
+  "Como posso ajudar você hoje?",
+  "O que vamos conquistar hoje?",
+  "Pronto quando você estiver. O que quer resolver?",
+  "No que estamos trabalhando hoje?",
+  "Estou aqui e pronto. Qual é o plano?",
 ];
 
 const stableStringHash = (value: string): number => {
@@ -86,7 +86,7 @@ const stableStringHash = (value: string): number => {
 };
 
 const resolveEmptyChatIntroMessage = (agentId: string, sessionEpoch: number | undefined): string => {
-  if (EMPTY_CHAT_INTRO_MESSAGES.length === 0) return "How can I help you today?";
+  if (EMPTY_CHAT_INTRO_MESSAGES.length === 0) return "Como posso ajudar você hoje?";
   const normalizedEpoch =
     typeof sessionEpoch === "number" && Number.isFinite(sessionEpoch)
       ? Math.max(0, Math.trunc(sessionEpoch))
@@ -155,7 +155,7 @@ type AgentChatPanelProps = {
 };
 
 const formatApprovalExpiry = (timestampMs: number): string => {
-  if (!Number.isFinite(timestampMs) || timestampMs <= 0) return "Unknown";
+  if (!Number.isFinite(timestampMs) || timestampMs <= 0) return "Desconhecido";
   return new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
@@ -178,15 +178,15 @@ const ExecApprovalCard = memo(function ExecApprovalCard({
       data-testid={`exec-approval-card-${approval.id}`}
     >
       <div className="type-meta">
-        Exec approval required
+        Aprovação necessária
       </div>
       <div className="mt-2 rounded-md bg-surface-3 px-2 py-1.5 shadow-2xs">
         <div className="font-mono text-[10px] font-semibold text-foreground">{approval.command}</div>
       </div>
       <div className="mt-2 grid gap-1 text-[11px] text-muted-foreground sm:grid-cols-2">
-        <div>Host: {approval.host ?? "unknown"}</div>
-        <div>Expires: {formatApprovalExpiry(approval.expiresAtMs)}</div>
-        {approval.cwd ? <div className="sm:col-span-2">CWD: {approval.cwd}</div> : null}
+        <div>Host: {approval.host ?? "desconhecido"}</div>
+        <div>Expira: {formatApprovalExpiry(approval.expiresAtMs)}</div>
+        {approval.cwd ? <div className="sm:col-span-2">Dir: {approval.cwd}</div> : null}
       </div>
       {approval.error ? (
         <div className="ui-alert-danger mt-2 rounded-md px-2 py-1 text-[11px] shadow-2xs">
@@ -199,27 +199,27 @@ const ExecApprovalCard = memo(function ExecApprovalCard({
           className="rounded-md border border-border/70 bg-surface-3 px-2.5 py-1 font-mono text-[12px] font-medium tracking-[0.02em] text-foreground transition hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
           onClick={() => onResolve?.(approval.id, "allow-once")}
           disabled={disabled}
-          aria-label={`Allow once for exec approval ${approval.id}`}
+          aria-label={`Permitir uma vez para aprovação ${approval.id}`}
         >
-          Allow once
+          Permitir uma vez
         </button>
         <button
           type="button"
           className="rounded-md border border-border/70 bg-surface-3 px-2.5 py-1 font-mono text-[12px] font-medium tracking-[0.02em] text-foreground transition hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
           onClick={() => onResolve?.(approval.id, "allow-always")}
           disabled={disabled}
-          aria-label={`Always allow for exec approval ${approval.id}`}
+          aria-label={`Sempre permitir para aprovação ${approval.id}`}
         >
-          Always allow
+          Sempre permitir
         </button>
         <button
           type="button"
           className="ui-btn-danger rounded-md px-2.5 py-1 font-mono text-[12px] font-medium tracking-[0.02em] transition disabled:cursor-not-allowed disabled:opacity-60"
           onClick={() => onResolve?.(approval.id, "deny")}
           disabled={disabled}
-          aria-label={`Deny exec approval ${approval.id}`}
+          aria-label={`Negar aprovação ${approval.id}`}
         >
-          Deny
+          Negar
         </button>
       </div>
     </div>
@@ -309,7 +309,7 @@ const ThinkingDetailsRow = memo(function ThinkingDetailsRow({
         <ChevronRight className="h-3 w-3 shrink-0 transition group-open:rotate-90" />
         <span className="flex min-w-0 items-center gap-2">
           <span className="font-mono text-[10px] font-medium tracking-[0.02em]">
-            Thinking (internal)
+            Raciocínio (interno)
           </span>
           {typeof durationMs === "number" ? (
             <span className="inline-flex items-center gap-1 font-mono text-[10px] font-medium tracking-[0.02em] text-muted-foreground/80">
@@ -367,7 +367,7 @@ const UserMessageCard = memo(function UserMessageCard({
     >
       <div className="flex items-center justify-between gap-3 bg-[color:var(--chat-user-header-bg)] px-3 py-2 dark:px-3.5 dark:py-2.5">
         <div className="type-meta min-w-0 truncate font-mono text-foreground/90">
-          You
+          Você
         </div>
         {typeof timestampMs === "number" ? (
           <time className="type-meta shrink-0 rounded-md bg-surface-3 px-2 py-0.5 font-mono text-muted-foreground/70">
@@ -448,7 +448,7 @@ const AssistantMessageCard = memo(function AssistantMessageCard({
             data-testid="agent-typing-indicator"
           >
             <span className="font-mono text-[10px] font-medium tracking-[0.02em]">
-              Thinking
+              Pensando
             </span>
             <span className="typing-dots" aria-hidden="true">
               <span />
@@ -552,7 +552,7 @@ const AssistantIntroCard = memo(function AssistantIntroCard({
         <div className="ui-chat-assistant-card mt-2">
           <div className="text-[14px] leading-[1.65] text-foreground">{title}</div>
           <div className="mt-2 font-mono text-[10px] tracking-[0.03em] text-muted-foreground/80">
-            Try describing a task, bug, or question to get started.
+            Descreva uma tarefa, bug ou pergunta para começar.
           </div>
         </div>
       </div>
@@ -845,12 +845,12 @@ const AgentChatTranscript = memo(function AgentChatTranscript({
             <div className="flex flex-col items-start gap-2 rounded-md bg-surface-2 px-3 py-2 shadow-2xs sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <div className="type-meta w-full min-w-0 break-words font-mono text-muted-foreground sm:truncate">
                 {hasHiddenFetchedHistory && typeof historyFetchedCount === "number" && typeof visibleTurnCount === "number"
-                  ? `Showing latest ${visibleTurnCount} of ${historyFetchedCount} loaded turns`
-                  : `Showing latest ${typeof visibleTurnCount === "number" ? visibleTurnCount : "?"} turns`}
+                  ? `Exibindo ${visibleTurnCount} de ${historyFetchedCount} turnos carregados`
+                  : `Exibindo últimos ${typeof visibleTurnCount === "number" ? visibleTurnCount : "?"} turnos`}
               </div>
               {historyGatewayCapReached && !hasHiddenFetchedHistory ? (
                 <div className="type-meta w-full min-w-0 break-words font-mono text-muted-foreground sm:w-auto sm:shrink-0">
-                  Showing latest retrievable history
+                  Exibindo histórico mais recente disponível
                 </div>
               ) : (
                 <button
@@ -858,7 +858,7 @@ const AgentChatTranscript = memo(function AgentChatTranscript({
                   className="inline-flex w-fit self-start rounded-md border border-border/70 bg-surface-3 px-3 py-1.5 font-mono text-[12px] font-medium tracking-[0.02em] text-foreground transition hover:bg-surface-2 sm:self-auto"
                   onClick={onLoadMoreHistory}
                 >
-                  {hasHiddenFetchedHistory ? "Show older" : "Load more"}
+                  {hasHiddenFetchedHistory ? "Mostrar anteriores" : "Carregar mais"}
                 </button>
               )}
             </div>
@@ -946,9 +946,9 @@ const AgentChatTranscript = memo(function AgentChatTranscript({
             setPinned(true);
             scrollChatToBottom();
           }}
-          aria-label="Jump to latest"
+          aria-label="Ir para o mais recente"
         >
-          Jump to latest
+          Ir para o mais recente
         </button>
       ) : null}
     </div>
@@ -1075,28 +1075,28 @@ const AgentChatComposer = memo(function AgentChatComposer({
   );
   const stopReason = stopDisabledReason?.trim() ?? "";
   const stopDisabled = !canSend || stopBusy || Boolean(stopReason);
-  const stopAriaLabel = stopReason ? `Stop unavailable: ${stopReason}` : "Stop";
+  const stopAriaLabel = stopReason ? `Parar indisponível: ${stopReason}` : "Parar";
   const modelSelectedLabel = useMemo(() => {
-    if (modelOptions.length === 0) return "No models found";
+    if (modelOptions.length === 0) return "Nenhum modelo";
     return modelOptions.find((option) => option.value === modelValue)?.label ?? modelValue;
   }, [modelOptions, modelValue]);
   const modelSelectWidthCh = Math.max(11, Math.min(30, modelSelectedLabel.length + 6));
   const thinkingSelectedLabel = useMemo(() => {
     switch (thinkingValue) {
       case "off":
-        return "Off";
+        return "Desligado";
       case "minimal":
-        return "Minimal";
+        return "Mínimo";
       case "low":
-        return "Low";
+        return "Baixo";
       case "medium":
-        return "Medium";
+        return "Médio";
       case "high":
-        return "High";
+        return "Alto";
       case "xhigh":
-        return "XHigh";
+        return "Máximo";
       default:
-        return "Default";
+        return "Padrão";
     }
   }, [thinkingValue]);
   const thinkingSelectWidthCh = Math.max(9, Math.min(16, thinkingSelectedLabel.length + 6));
@@ -1111,7 +1111,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
           <div
             className="min-w-0 max-w-full space-y-1 overflow-hidden"
             data-testid="queued-messages-bar"
-            aria-label="Queued messages"
+            aria-label="Mensagens na fila"
           >
             {queuedMessages.map((queuedMessage, index) => (
               <div
@@ -1119,7 +1119,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
                 className="flex w-full min-w-0 max-w-full items-center gap-1 overflow-hidden rounded-md border border-border/70 bg-card/80 px-2 py-1 text-[11px] text-foreground"
               >
                 <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
-                  Queued
+                  Na fila
                 </span>
                 <span
                   className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
@@ -1130,7 +1130,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
                 <button
                   type="button"
                   className="inline-flex h-4 w-4 flex-none items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-2 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label={`Remove queued message ${index + 1}`}
+                  aria-label={`Remover mensagem na fila ${index + 1}`}
                   onClick={() => onRemoveQueuedMessage?.(index)}
                   disabled={!onRemoveQueuedMessage}
                 >
@@ -1176,7 +1176,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
                 type="button"
                 className="ml-0.5 text-white/40 hover:text-white/80"
                 onClick={() => onRemoveAttachment?.(index)}
-                aria-label={`Remove ${f.name}`}
+                aria-label={`Remover ${f.name}`}
               >
                 <X className="h-2.5 w-2.5" />
               </button>
@@ -1192,7 +1192,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
           className="chat-composer-input min-h-[28px] max-h-[34vh] min-w-0 flex-1 resize-none border-0 bg-transparent px-0 py-1 text-[16px] leading-6 text-foreground outline-none shadow-none transition placeholder:text-muted-foreground/65 focus:outline-none focus-visible:outline-none focus-visible:ring-0 sm:text-[15px]"
           onChange={onChange}
           onKeyDown={onKeyDown}
-          placeholder="type a message"
+          placeholder="escreva uma mensagem"
         />
         {running ? (
           <button
@@ -1201,7 +1201,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
             onClick={onStop}
             disabled={stopDisabled}
             aria-label={stopAriaLabel}
-            title={stopReason || "Stop agent"}
+            title={stopReason || "Parar agente"}
           >
             <Square className="h-4 w-4" />
           </button>
@@ -1211,7 +1211,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
             type="button"
             onClick={onSend}
             disabled={sendDisabled}
-            aria-label="Send message"
+            aria-label="Enviar mensagem"
           >
             <ArrowUp className="h-4 w-4" />
           </button>
@@ -1219,24 +1219,24 @@ const AgentChatComposer = memo(function AgentChatComposer({
       </div>
       <div className="mt-2 flex flex-col gap-2 sm:mt-1 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 sm:w-auto sm:flex-nowrap">
-          <InlineHoverTooltip text="Choose model — click to browse all">
+          <InlineHoverTooltip text="Escolher modelo — clique para ver todos">
             <button
               type="button"
               className="ui-input ui-control-important inline-flex h-6 min-w-0 items-center gap-1 rounded-md px-1.5 text-[10px] font-semibold text-foreground hover:bg-white/8 transition-colors"
               style={{ maxWidth: "clamp(12ch, 58vw, 30ch)" }}
-              aria-label="Select model"
+              aria-label="Selecionar modelo"
               onClick={() => setModelModalOpen(true)}
             >
               <span className="truncate">{modelSelectedLabel}</span>
             </button>
           </InlineHoverTooltip>
           {allowThinking ? (
-            <InlineHoverTooltip text="Reasoning effort — click to learn more">
+            <InlineHoverTooltip text="Nível de raciocínio — clique para saber mais">
               <button
                 type="button"
                 className="ui-input ui-control-important inline-flex h-6 min-w-0 items-center gap-1 rounded-md px-1.5 text-[10px] font-semibold text-foreground hover:bg-white/8 transition-colors"
                 style={{ maxWidth: "min(40vw, 16ch)" }}
-                aria-label="Select reasoning effort"
+                aria-label="Selecionar nível de raciocínio"
                 onClick={() => setReasoningModalOpen(true)}
               >
                 <span className="truncate">{thinkingSelectedLabel}</span>
@@ -1246,24 +1246,24 @@ const AgentChatComposer = memo(function AgentChatComposer({
         </div>
         <div className="composer-toolbar flex w-full flex-wrap items-center justify-end gap-1.5 text-[10px] text-muted-foreground sm:ml-auto sm:w-auto sm:flex-nowrap">
           {/* attach file button */}
-          <InlineHoverTooltip text={attachedFiles.length > 0 ? `${attachedFiles.length} file(s) attached` : "Attach files to message"}>
+          <InlineHoverTooltip text={attachedFiles.length > 0 ? `${attachedFiles.length} arquivo(s) anexado(s)` : "Anexar arquivos à mensagem"}>
             <button
               type="button"
               className={`ui-btn-icon ui-btn-icon-xs ${attachedFiles.length > 0 ? "btn-active-indicator" : ""}`}
-              aria-label="Attach file"
+              aria-label="Anexar arquivo"
               onClick={() => fileInputRef.current?.click()}
             >
               <Paperclip className="h-3.5 w-3.5" />
             </button>
           </InlineHoverTooltip>
           {/* md preview toggle */}
-          <InlineHoverTooltip text={mdPreview ? "Hide markdown preview" : "Preview markdown as rendered"}>
+          <InlineHoverTooltip text={mdPreview ? "Ocultar prévia do markdown" : "Visualizar markdown renderizado"}>
             <button
               type="button"
               className={`ui-btn-icon ui-btn-icon-xs ${mdPreview ? "btn-active-indicator" : ""}`}
               role="switch"
               aria-checked={mdPreview}
-              aria-label="Toggle markdown preview"
+              aria-label="Alternar prévia de markdown"
               onClick={onMdPreviewToggle}
             >
               <FileText className="h-3.5 w-3.5" />
@@ -1271,22 +1271,22 @@ const AgentChatComposer = memo(function AgentChatComposer({
           </InlineHoverTooltip>
           {/* open files panel */}
           {onOpenFilesPanel ? (
-            <InlineHoverTooltip text="Open file vault">
+            <InlineHoverTooltip text="Abrir cofre de arquivos">
               <button
                 type="button"
                 className="ui-btn-icon ui-btn-icon-xs"
-                aria-label="Open file vault"
+                aria-label="Abrir cofre de arquivos"
                 onClick={onOpenFilesPanel}
               >
                 <FolderOpen className="h-3.5 w-3.5" />
               </button>
             </InlineHoverTooltip>
           ) : null}
-          <InlineHoverTooltip text={toolCallingEnabled ? "Tool calls shown in transcript (click to hide)" : "Show tool calls in transcript"}>
+          <InlineHoverTooltip text={toolCallingEnabled ? "Chamadas de ferramentas no histórico (clique para ocultar)" : "Exibir chamadas de ferramentas"}>
             <button
               type="button"
               role="switch"
-              aria-label="Show tool calls"
+              aria-label="Exibir chamadas de ferramentas"
               aria-checked={toolCallingEnabled}
               className={`inline-flex h-5 shrink-0 items-center rounded-sm border px-1.5 font-mono text-[10px] tracking-[0.01em] transition ${
                 toolCallingEnabled
@@ -1295,14 +1295,14 @@ const AgentChatComposer = memo(function AgentChatComposer({
               }`}
               onClick={() => onToolCallingToggle(!toolCallingEnabled)}
             >
-              Tools
+              Ferramentas
             </button>
           </InlineHoverTooltip>
-          <InlineHoverTooltip text={showThinkingTraces ? "Thinking traces visible (click to hide)" : "Show agent thinking traces"}>
+          <InlineHoverTooltip text={showThinkingTraces ? "Raciocínio visível (clique para ocultar)" : "Exibir raciocínio do agente"}>
             <button
               type="button"
               role="switch"
-              aria-label="Show thinking"
+              aria-label="Exibir raciocínio"
               aria-checked={showThinkingTraces}
               className={`inline-flex h-5 shrink-0 items-center rounded-sm border px-1.5 font-mono text-[10px] tracking-[0.01em] transition ${
                 showThinkingTraces
@@ -1311,7 +1311,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
               }`}
               onClick={() => onThinkingTracesToggle(!showThinkingTraces)}
             >
-              Thinking
+              Raciocínio
             </button>
           </InlineHoverTooltip>
         </div>
@@ -1665,7 +1665,7 @@ export const AgentChatPanel = ({
     const nextName = renameDraft.trim();
     const currentName = agent.name.trim();
     if (!nextName) {
-      setRenameError("Agent name is required.");
+      setRenameError("Nome do agente é obrigatório.");
       return;
     }
     if (nextName === currentName) {
@@ -1679,7 +1679,7 @@ export const AgentChatPanel = ({
     try {
       const ok = await onRename(nextName);
       if (!ok) {
-        setRenameError("Failed to rename agent.");
+        setRenameError("Falha ao renomear agente.");
         return;
       }
       setRenameEditing(false);
@@ -1737,7 +1737,7 @@ export const AgentChatPanel = ({
                       <input
                         ref={renameInputRef}
                         className="ui-input agent-rename-input h-8 min-w-0 flex-1 rounded-md px-2 text-[12px] font-semibold text-foreground"
-                        aria-label="Edit agent name"
+                        aria-label="Editar nome do agente"
                         data-testid="agent-rename-input"
                         value={renameDraft}
                         disabled={renameSaving}
@@ -1750,7 +1750,7 @@ export const AgentChatPanel = ({
                       <button
                         className="ui-btn-icon ui-btn-icon-sm agent-rename-control"
                         type="button"
-                        aria-label="Save agent name"
+                        aria-label="Salvar nome do agente"
                         data-testid="agent-rename-save"
                         onClick={() => {
                           void submitRename();
@@ -1762,7 +1762,7 @@ export const AgentChatPanel = ({
                       <button
                         className="ui-btn-icon ui-btn-icon-sm agent-rename-control"
                         type="button"
-                        aria-label="Cancel agent rename"
+                        aria-label="Cancelar renomeação do agente"
                         data-testid="agent-rename-cancel"
                         onClick={cancelRename}
                         disabled={renameSaving}
@@ -1779,7 +1779,7 @@ export const AgentChatPanel = ({
                         <button
                           className="ui-btn-icon ui-btn-icon-xs agent-rename-control shrink-0"
                           type="button"
-                          aria-label="Rename agent"
+                          aria-label="Renomear agente"
                           data-testid="agent-rename-toggle"
                           onClick={beginRename}
                         >
@@ -1800,8 +1800,8 @@ export const AgentChatPanel = ({
             <button
               className="nodrag ui-btn-icon !inline-flex md:!hidden"
               type="button"
-              aria-label="Expand transcript"
-              title="Expand transcript"
+              aria-label="Expandir histórico"
+              title="Expandir histórico"
               onClick={() => setTranscriptModalOpen(true)}
             >
               <Maximize2 className="h-4 w-4" />
@@ -1810,21 +1810,21 @@ export const AgentChatPanel = ({
               className="nodrag ui-btn-primary px-2.5 py-1.5 font-mono text-[11px] font-medium tracking-[0.02em] disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground"
               type="button"
               data-testid="agent-new-session-toggle"
-              aria-label="Start new session"
-              title="Start new session"
+              aria-label="Iniciar nova sessão"
+              title="Nova sessão"
               onClick={() => {
                 void handleNewSession();
               }}
               disabled={newSessionDisabled}
             >
-              {newSessionBusy ? "Starting..." : "New session"}
+              {newSessionBusy ? "Iniciando..." : "Nova sessão"}
             </button>
             <button
               className="nodrag ui-btn-icon"
               type="button"
               data-testid="agent-settings-toggle"
-              aria-label="Open behavior"
-              title="Behavior"
+              aria-label="Configurar comportamento"
+              title="Comportamento"
               onClick={onOpenSettings}
             >
               <Cog className="h-4 w-4" />
@@ -1910,13 +1910,13 @@ export const AgentChatPanel = ({
       {transcriptModalOpen ? (
         <div className="fixed inset-0 z-[130] flex min-h-0 flex-col bg-background md:hidden">
           <div className="flex items-center justify-between border-b border-border/60 px-3 py-2">
-            <div className="truncate text-sm font-medium text-foreground">{agent.name} · Transcript</div>
+            <div className="truncate text-sm font-medium text-foreground">{agent.name} · Histórico</div>
             <button
               type="button"
               className="ui-btn-secondary px-3 py-1.5 text-xs"
               onClick={() => setTranscriptModalOpen(false)}
             >
-              Close
+              Fechar
             </button>
           </div>
           <div className="h-0 min-h-0 flex-1 overflow-hidden px-2 pb-2">

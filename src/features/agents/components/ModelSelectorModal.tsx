@@ -72,7 +72,7 @@ export const ModelSelectorModal = ({
         className="ui-panel flex w-full max-w-md flex-col overflow-hidden rounded-2xl"
         style={{ maxHeight: "70vh" }}
       >
-        {/* header */}
+        {/* cabeçalho */}
         <div
           className="flex shrink-0 items-center justify-between border-b px-5 py-3"
           style={{ borderColor: "#27272a" }}
@@ -80,20 +80,20 @@ export const ModelSelectorModal = ({
           <div className="flex items-center gap-2">
             <Cpu className="h-3.5 w-3.5 text-white/40" />
             <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white/50">
-              Select model
+              Selecionar modelo
             </span>
           </div>
           <button
             type="button"
             className="ui-btn-icon ui-btn-icon-xs"
             onClick={onClose}
-            aria-label="Close"
+            aria-label="Fechar"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
 
-        {/* search */}
+        {/* busca */}
         <div className="relative shrink-0 border-b px-4 py-2.5" style={{ borderColor: "#27272a" }}>
           <Search
             className="absolute left-7 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/25 pointer-events-none"
@@ -101,7 +101,7 @@ export const ModelSelectorModal = ({
           <input
             type="text"
             autoFocus
-            placeholder="Search models..."
+            placeholder="Buscar modelos..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="sidebar-search-input pl-8"
@@ -109,12 +109,12 @@ export const ModelSelectorModal = ({
           />
         </div>
 
-        {/* model list */}
+        {/* lista de modelos */}
         <div className="ui-scroll min-h-0 flex-1 overflow-y-auto p-2">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center py-10 text-center">
               <Search className="mb-2 h-5 w-5 text-white/15" />
-              <p className="font-mono text-[11px] text-white/30">No models match</p>
+              <p className="font-mono text-[11px] text-white/30">Nenhum modelo encontrado</p>
             </div>
           ) : (
             <div className="flex flex-col gap-0.5">
@@ -154,7 +154,7 @@ export const ModelSelectorModal = ({
                       ) : null}
                       {option.reasoning ? (
                         <span className="rounded-sm bg-violet-500/20 px-1 py-0.5 font-mono text-[8px] font-semibold uppercase tracking-[0.06em] text-violet-400">
-                          Reasoning
+                          Raciocínio
                         </span>
                       ) : null}
                     </div>
@@ -174,7 +174,7 @@ export const ModelSelectorModal = ({
             style={{ borderColor: "#27272a" }}
           >
             <p className="font-mono text-[10px] text-white/25">
-              {filtered.length} model{filtered.length !== 1 ? "s" : ""} available
+              {filtered.length} modelo{filtered.length !== 1 ? "s" : ""} disponível{filtered.length !== 1 ? "is" : ""}
             </p>
           </div>
         ) : null}

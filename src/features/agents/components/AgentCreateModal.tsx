@@ -19,7 +19,7 @@ const labelClassName =
 
 const resolveInitialName = (suggestedName: string): string => {
   const trimmed = suggestedName.trim();
-  if (!trimmed) return "New Agent";
+  if (!trimmed) return "Novo Agente";
   return trimmed;
 };
 
@@ -46,7 +46,7 @@ const AgentCreateModalContent = ({
       className="fixed inset-0 z-[120] flex items-center justify-center bg-background/80 p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Create agent"
+      aria-label="Criar agente"
       onClick={busy ? undefined : onClose}
     >
       <form
@@ -61,10 +61,10 @@ const AgentCreateModalContent = ({
         <div className="flex items-center justify-between border-b border-border/35 px-6 py-6">
           <div>
             <div className="font-mono text-[11px] font-semibold tracking-[0.06em] text-muted-foreground">
-              New agent
+              Novo agente
             </div>
-            <div className="mt-1 text-base font-semibold text-foreground">Launch agent</div>
-            <div className="mt-1 text-xs text-muted-foreground">Name it and activate immediately.</div>
+            <div className="mt-1 text-base font-semibold text-foreground">Lançar agente</div>
+            <div className="mt-1 text-xs text-muted-foreground">Nomeie e ative imediatamente.</div>
           </div>
           <button
             type="button"
@@ -72,23 +72,23 @@ const AgentCreateModalContent = ({
             onClick={onClose}
             disabled={busy}
           >
-            Close
+            Fechar
           </button>
         </div>
 
         <div className="grid gap-4 px-6 py-5">
           <label className={labelClassName}>
-            Name
+            Nome
             <input
-              aria-label="Agent name"
+              aria-label="Nome do agente"
               value={name}
               onChange={(event) => setName(event.target.value)}
               className={`mt-1 ${fieldClassName}`}
-              placeholder="My agent"
+              placeholder="Meu agente"
             />
           </label>
           <div className="-mt-2 text-[11px] text-muted-foreground">
-            You can rename this agent from the main chat header.
+            Você pode renomear o agente pelo cabeçalho do chat.
           </div>
 
           {submitError ? (
@@ -99,13 +99,13 @@ const AgentCreateModalContent = ({
         </div>
 
         <div className="flex items-center justify-between border-t border-border/45 px-6 pb-4 pt-5">
-          <div className="text-[11px] text-muted-foreground">Authority can be configured after launch.</div>
+          <div className="text-[11px] text-muted-foreground">Permissões podem ser configuradas após o lançamento.</div>
           <button
             type="submit"
             className="ui-btn-primary px-3 py-1.5 font-mono text-[11px] font-semibold tracking-[0.06em] disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground"
             disabled={!canSubmit || busy}
           >
-            {busy ? "Launching..." : "Launch agent"}
+            {busy ? "Lançando..." : "Lançar agente"}
           </button>
         </div>
       </form>

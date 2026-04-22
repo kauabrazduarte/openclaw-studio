@@ -52,10 +52,10 @@ export const ConnectionPanel = ({
 }: ConnectionPanelProps) => {
   const actionBusy = saving || testing || disconnecting;
   const tokenHelper = hasStoredToken
-    ? "Stored token available on this Studio host. Leave blank to keep it."
+    ? "Token armazenado disponível neste host. Deixe em branco para manter."
     : localGatewayDefaultsHasToken
-      ? "A local OpenClaw token is available on this host. Leave blank to use it."
-      : "Enter the token Studio should use for this upstream.";
+      ? "Um token local do OpenClaw está disponível neste host. Deixe em branco para usá-lo."
+      : "Insira o token que o Studio deve usar para este gateway.";
 
   return (
     <div className="fade-up-delay flex flex-col gap-3">
@@ -73,7 +73,7 @@ export const ConnectionPanel = ({
             onClick={onSaveSettings}
             disabled={actionBusy || !draftGatewayUrl.trim()}
           >
-            {saving ? "Saving…" : "Save settings"}
+            {saving ? "Salvando…" : "Salvar configurações"}
           </button>
           <button
             className="ui-btn-ghost px-4 py-2 text-xs font-semibold tracking-[0.05em] text-foreground disabled:cursor-not-allowed disabled:opacity-60"
@@ -81,7 +81,7 @@ export const ConnectionPanel = ({
             onClick={onTestConnection}
             disabled={actionBusy || !draftGatewayUrl.trim()}
           >
-            {testing ? "Testing…" : "Test connection"}
+            {testing ? "Testando…" : "Testar conexão"}
           </button>
           {status === "connected" ? (
             <button
@@ -90,7 +90,7 @@ export const ConnectionPanel = ({
               onClick={onDisconnect}
               disabled={actionBusy}
             >
-              {disconnecting ? "Disconnecting…" : "Disconnect"}
+              {disconnecting ? "Desconectando…" : "Desconectar"}
             </button>
           ) : null}
         </div>
@@ -100,33 +100,33 @@ export const ConnectionPanel = ({
             type="button"
             onClick={onClose}
             data-testid="gateway-connection-close"
-            aria-label="Close gateway connection panel"
+            aria-label="Fechar painel de conexão do gateway"
           >
             <X className="h-3.5 w-3.5" />
-            Close
+            Fechar
           </button>
         ) : null}
       </div>
       <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
         <label className="flex flex-col gap-1 font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
-          Upstream gateway URL
+          URL do gateway
           <input
             className="ui-input h-10 rounded-md px-4 font-sans text-sm text-foreground outline-none"
             type="text"
             value={draftGatewayUrl}
             onChange={(event) => onGatewayUrlChange(event.target.value)}
-            placeholder="ws://localhost:18789 or wss://your-gateway.ts.net"
+            placeholder="ws://localhost:18789 ou wss://seu-gateway.ts.net"
             spellCheck={false}
           />
         </label>
         <label className="flex flex-col gap-1 font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
-          Upstream token
+          Token de acesso
           <input
             className="ui-input h-10 rounded-md px-4 font-sans text-sm text-foreground outline-none"
             type="password"
             value={token}
             onChange={(event) => onTokenChange(event.target.value)}
-            placeholder="gateway token"
+            placeholder="token do gateway"
             spellCheck={false}
           />
         </label>
@@ -134,11 +134,11 @@ export const ConnectionPanel = ({
       <p className="text-xs text-muted-foreground">{tokenHelper}</p>
       {hasUnsavedChanges ? (
         <p className="font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
-          Unsaved changes
+          Alterações não salvas
         </p>
       ) : (
         <p className="text-xs text-muted-foreground">
-          Saved upstream: <span className="font-mono">{savedGatewayUrl || "not configured"}</span>
+          Gateway salvo: <span className="font-mono">{savedGatewayUrl || "não configurado"}</span>
         </p>
       )}
       {statusReason ? <p className="text-xs text-muted-foreground">{statusReason}</p> : null}

@@ -403,17 +403,17 @@ export const resolveConfigMutationStatusLine = (params: {
   const { block, status } = params;
   if (!block) return null;
   if (block.phase === "queued") {
-    return "Waiting for active runs to finish";
+    return "Aguardando execuções ativas finalizarem";
   }
   if (block.phase === "mutating") {
-    return params.mutatingLabel ?? "Submitting config change";
+    return params.mutatingLabel ?? "Enviando alteração de configuração";
   }
   if (!block.sawDisconnect) {
-    return "Waiting for gateway to restart";
+    return "Aguardando reinício do gateway";
   }
   return status === "connected"
-    ? "Gateway is back online, syncing agents"
-    : "Gateway restart in progress";
+    ? "Gateway de volta online, sincronizando agentes"
+    : "Reinício do gateway em andamento";
 };
 
 export const resolveConfigMutationPostRunEffects = (

@@ -76,7 +76,7 @@ const AgentInspectHeader = ({
         className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/55 transition hover:bg-surface-2 hover:text-muted-foreground/85"
         type="button"
         data-testid={closeTestId}
-        aria-label="Close panel"
+        aria-label="Fechar painel"
         disabled={closeDisabled}
         onClick={onClose}
       >
@@ -109,14 +109,14 @@ type AgentSettingsPanelProps = {
 
 const formatCronStateLine = (job: CronJobSummary): string | null => {
   if (typeof job.state.runningAtMs === "number" && Number.isFinite(job.state.runningAtMs)) {
-    return "Running now";
+    return "Em execução agora";
   }
   if (typeof job.state.nextRunAtMs === "number" && Number.isFinite(job.state.nextRunAtMs)) {
-    return `Next: ${new Date(job.state.nextRunAtMs).toLocaleString()}`;
+    return `Próximo: ${new Date(job.state.nextRunAtMs).toLocaleString()}`;
   }
   if (typeof job.state.lastRunAtMs === "number" && Number.isFinite(job.state.lastRunAtMs)) {
     const status = job.state.lastStatus ? `${job.state.lastStatus} ` : "";
-    return `Last: ${status}${new Date(job.state.lastRunAtMs).toLocaleString()}`.trim();
+    return `Último: ${status}${new Date(job.state.lastRunAtMs).toLocaleString()}`.trim();
   }
   return null;
 };
@@ -142,41 +142,41 @@ type CronTemplateOption = {
 const CRON_TEMPLATE_OPTIONS: CronTemplateOption[] = [
   {
     id: "morning-brief",
-    title: "Morning Brief",
-    description: "Daily status summary with overnight updates.",
+    title: "Resumo matinal",
+    description: "Resumo diário de status com atualizações da noite.",
     icon: Sun,
   },
   {
     id: "reminder",
-    title: "Reminder",
-    description: "A timed nudge for a specific event or task.",
+    title: "Lembrete",
+    description: "Um aviso programado para um evento ou tarefa específica.",
     icon: Bell,
   },
   {
     id: "weekly-review",
-    title: "Weekly Review",
-    description: "Recurring synthesis across a longer time window.",
+    title: "Revisão semanal",
+    description: "Síntese recorrente em uma janela de tempo maior.",
     icon: CalendarDays,
   },
   {
     id: "inbox-triage",
-    title: "Inbox Triage",
-    description: "Regular sorting and summarizing of incoming updates.",
+    title: "Triagem de entrada",
+    description: "Organização e resumo regular de atualizações recebidas.",
     icon: ListChecks,
   },
   {
     id: "custom",
-    title: "Custom",
-    description: "Start from a blank flow and choose each setting.",
+    title: "Personalizado",
+    description: "Comece do zero e escolha cada configuração.",
     icon: ListChecks,
   },
 ];
 
 const TIMED_AUTOMATION_STEP_META: Array<{ title: string; indicator: string }> = [
-  { title: "Choose type", indicator: "Type" },
-  { title: "Define function", indicator: "Function" },
-  { title: "Set timing", indicator: "Timing" },
-  { title: "Review and create", indicator: "Review" },
+  { title: "Escolher tipo", indicator: "Tipo" },
+  { title: "Definir função", indicator: "Função" },
+  { title: "Definir horário", indicator: "Horário" },
+  { title: "Revisar e criar", indicator: "Revisão" },
 ];
 
 const resolveLocalTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -338,7 +338,7 @@ export const AgentSettingsPanel = ({
       await onUpdateAgentPermissions(draft);
       setPermissionsSaveState("saved");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to save permissions.";
+      const message = err instanceof Error ? err.message : "Falha ao salvar permissões.";
       setPermissionsSaveState("error");
       setPermissionsSaveError(message);
     } finally {
@@ -437,7 +437,7 @@ export const AgentSettingsPanel = ({
       await onCreateCronJob(payload);
       closeCronCreate();
     } catch (err) {
-      setCronCreateError(err instanceof Error ? err.message : "Failed to create automation.");
+      setCronCreateError(err instanceof Error ? err.message : "Falha ao criar automação.");
     }
   };
 
@@ -461,7 +461,7 @@ export const AgentSettingsPanel = ({
 
   const panelLabel =
     mode === "advanced"
-      ? "Advanced"
+      ? "Avançado"
       : "";
   const canOpenControlUi = typeof controlUiUrl === "string" && controlUiUrl.trim().length > 0;
   const timedAutomationStepMeta =
@@ -493,16 +493,16 @@ export const AgentSettingsPanel = ({
               <div className="mt-2 flex flex-col gap-8">
                 <div className="px-1 py-1">
                   <div className="sidebar-copy flex flex-col gap-1 text-[11px] text-muted-foreground">
-                    <span className="font-medium text-foreground/88">Run commands</span>
+                    <span className="font-medium text-foreground/88">Executar comandos</span>
                     <div
                       className="ui-segment ui-segment-command-mode mt-2 grid-cols-3"
                       role="group"
-                      aria-label="Run commands"
+                      aria-label="Executar comandos"
                     >
                       {(
                         [
-                          { id: "off", label: "Off" },
-                          { id: "ask", label: "Ask" },
+                          { id: "off", label: "Desligado" },
+                          { id: "ask", label: "Perguntar" },
                           { id: "auto", label: "Auto" },
                         ] as const
                       ).map((option) => {
@@ -511,7 +511,7 @@ export const AgentSettingsPanel = ({
                           <button
                             key={option.id}
                             type="button"
-                            aria-label={`Run commands ${option.label.toLowerCase()}`}
+                            aria-label={`Executar comandos: ${option.label}`}
                             aria-pressed={selected}
                             className="ui-segment-item px-3 py-2.5 text-center font-mono text-[11px] font-semibold tracking-[0.04em]"
                             data-active={selected ? "true" : "false"}
@@ -534,7 +534,7 @@ export const AgentSettingsPanel = ({
                     <button
                       type="button"
                       role="switch"
-                      aria-label="Web access"
+                      aria-label="Acesso à web"
                       aria-checked={permissionsDraftValue.webAccess}
                       className={`ui-switch self-center ${permissionsDraftValue.webAccess ? "ui-switch--on" : ""}`}
                       onClick={() =>
@@ -547,9 +547,9 @@ export const AgentSettingsPanel = ({
                       <span className="ui-switch-thumb" />
                     </button>
                     <div className="sidebar-copy flex flex-col">
-                      <span className="text-[11px] font-medium text-foreground/88">Web access</span>
+                      <span className="text-[11px] font-medium text-foreground/88">Acesso à web</span>
                       <span className="text-[10px] text-muted-foreground/70">
-                        Allows this agent to fetch live web results.
+                        Permite que este agente busque resultados na web em tempo real.
                       </span>
                     </div>
                   </div>
@@ -560,7 +560,7 @@ export const AgentSettingsPanel = ({
                     <button
                       type="button"
                       role="switch"
-                      aria-label="File tools"
+                      aria-label="Ferramentas de arquivo"
                       aria-checked={permissionsDraftValue.fileTools}
                       className={`ui-switch self-center ${permissionsDraftValue.fileTools ? "ui-switch--on" : ""}`}
                       onClick={() =>
@@ -573,9 +573,9 @@ export const AgentSettingsPanel = ({
                       <span className="ui-switch-thumb" />
                     </button>
                     <div className="sidebar-copy flex flex-col">
-                      <span className="text-[11px] font-medium text-foreground/88">File tools</span>
+                      <span className="text-[11px] font-medium text-foreground/88">Ferramentas de arquivo</span>
                       <span className="text-[10px] text-muted-foreground/70">
-                        Lets this agent read and edit files in its workspace.
+                        Permite que este agente leia e edite arquivos em seu workspace.
                       </span>
                     </div>
                   </div>
@@ -586,7 +586,7 @@ export const AgentSettingsPanel = ({
                     <button
                       type="button"
                       role="switch"
-                      aria-label="Browser automation"
+                      aria-label="Automação de navegador"
                       aria-checked="false"
                       className="ui-switch self-center"
                       disabled
@@ -594,19 +594,19 @@ export const AgentSettingsPanel = ({
                       <span className="ui-switch-thumb" />
                     </button>
                     <div className="sidebar-copy flex flex-col">
-                      <span className="text-[11px] font-medium text-foreground/88">Browser automation</span>
-                      <span className="text-[10px] text-muted-foreground/70">Coming soon</span>
+                      <span className="text-[11px] font-medium text-foreground/88">Automação de navegador</span>
+                      <span className="text-[10px] text-muted-foreground/70">Em breve</span>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground/55" aria-hidden="true" />
                 </div>
               </div>
               <div className="sidebar-copy mt-3 text-[11px] text-muted-foreground">
-                {permissionsSaveState === "saving" ? "Saving..." : null}
-                {permissionsSaveState === "saved" ? "Saved." : null}
+                {permissionsSaveState === "saving" ? "Salvando..." : null}
+                {permissionsSaveState === "saved" ? "Salvo." : null}
                 {permissionsSaveState === "error" && permissionsSaveError ? (
                   <span>
-                    Couldn&apos;t save. {permissionsSaveError}{" "}
+                    Não foi possível salvar. {permissionsSaveError}{" "}
                     <button
                       type="button"
                       className="underline underline-offset-2"
@@ -614,14 +614,14 @@ export const AgentSettingsPanel = ({
                         void runPermissionsSave(permissionsDraftValue);
                       }}
                     >
-                      Retry
+                      Tentar novamente
                     </button>
                   </span>
                 ) : null}
               </div>
               {permissionsSaveState === "error" && !permissionsSaveError ? (
                 <div className="ui-alert-danger mt-3 rounded-md px-3 py-2 text-xs">
-                  Couldn&apos;t save permissions.
+                  Não foi possível salvar as permissões.
                 </div>
               ) : null}
             </section>
@@ -634,19 +634,19 @@ export const AgentSettingsPanel = ({
             data-testid="agent-settings-cron"
           >
           <div className="flex items-center justify-between gap-2">
-            <h3 className="sidebar-section-title">Timed automations</h3>
+            <h3 className="sidebar-section-title">Automações programadas</h3>
             {!cronLoading && !cronError && cronJobs.length > 0 ? (
               <button
                 className="sidebar-btn-ghost px-2.5 py-1.5 font-mono text-[10px] font-semibold tracking-[0.06em] disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
                 onClick={openCronCreate}
               >
-                Create
+                Criar
               </button>
             ) : null}
           </div>
           {cronLoading ? (
-            <div className="mt-3 text-[11px] text-muted-foreground">Loading timed automations...</div>
+            <div className="mt-3 text-[11px] text-muted-foreground">Carregando automações...</div>
           ) : null}
           {!cronLoading && cronError ? (
             <div className="ui-alert-danger mt-3 rounded-md px-3 py-2 text-xs">
@@ -661,14 +661,14 @@ export const AgentSettingsPanel = ({
                 data-testid="cron-empty-icon"
               />
               <div className="sidebar-copy text-[11px] text-muted-foreground/82">
-                No timed automations for this agent.
+                Nenhuma automação programada para este agente.
               </div>
               <button
                 className="sidebar-btn-primary mt-2 w-auto min-w-[116px] self-center px-4 py-2 font-mono text-[10px] font-semibold tracking-[0.06em] disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
                 onClick={openCronCreate}
               >
-                Create
+                Criar
               </button>
             </div>
           ) : null}
@@ -694,13 +694,13 @@ export const AgentSettingsPanel = ({
                         </div>
                         {!job.enabled ? (
                           <div className="shrink-0 rounded-md bg-muted/50 px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-2xs">
-                            Disabled
+                            Desativado
                           </div>
                         ) : null}
                       </div>
                       <div className="mt-1 text-[11px] text-muted-foreground">
                         <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                      Frequency
+                      Frequência
                         </span>
                         <div className="break-words">{scheduleText}</div>
                       </div>
@@ -713,7 +713,7 @@ export const AgentSettingsPanel = ({
                         <div className="mt-1 text-[11px] text-muted-foreground">
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                              Task
+                              Tarefa
                             </span>
                             {payloadExpandable ? (
                               <button
@@ -731,7 +731,7 @@ export const AgentSettingsPanel = ({
                                   });
                                 }}
                               >
-                                {expanded ? "Less" : "More"}
+                                {expanded ? "Menos" : "Mais"}
                               </button>
                             ) : null}
                           </div>
@@ -745,7 +745,7 @@ export const AgentSettingsPanel = ({
                       <button
                         className="ui-btn-icon h-7 w-7 disabled:cursor-not-allowed disabled:opacity-60"
                         type="button"
-                        aria-label={`Run timed automation ${job.name} now`}
+                        aria-label={`Executar automação "${job.name}" agora`}
                         onClick={() => {
                           void onRunCronJob(job.id);
                         }}
@@ -756,7 +756,7 @@ export const AgentSettingsPanel = ({
                       <button
                         className="ui-btn-icon ui-btn-icon-danger h-7 w-7 bg-transparent disabled:cursor-not-allowed disabled:opacity-60"
                         type="button"
-                        aria-label={`Delete timed automation ${job.name}`}
+                        aria-label={`Excluir automação "${job.name}"`}
                         onClick={() => {
                           void onDeleteCronJob(job.id);
                         }}
@@ -776,7 +776,7 @@ export const AgentSettingsPanel = ({
           >
             <h3 className="sidebar-section-title">Heartbeats</h3>
             <div className="mt-3 text-[11px] text-muted-foreground">
-              Heartbeat automation controls are coming soon.
+              Controles de automação por heartbeat em breve.
             </div>
           </section>
           </section>
@@ -785,14 +785,14 @@ export const AgentSettingsPanel = ({
         {mode === "advanced" ? (
           <>
             <section className="sidebar-section mt-8" data-testid="agent-settings-control-ui">
-              <h3 className="sidebar-section-title ui-text-danger">Danger Zone</h3>
+              <h3 className="sidebar-section-title ui-text-danger">Zona de Perigo</h3>
               <div className="ui-alert-danger mt-3 rounded-md px-3 py-3 text-[11px]">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   <div className="space-y-1">
-                    <div className="font-medium">Advanced users only.</div>
-                    <div>Open the full OpenClaw Control UI outside Studio.</div>
-                    <div>Changes there can break agent behavior or put Studio out of sync.</div>
+                    <div className="font-medium">Apenas para usuários avançados.</div>
+                    <div>Abrir a interface de controle completa do OpenClaw fora do Studio.</div>
+                    <div>Alterações lá podem quebrar o comportamento do agente ou dessincronizar o Studio.</div>
                   </div>
                 </div>
               </div>
@@ -803,7 +803,7 @@ export const AgentSettingsPanel = ({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Open Full Control UI
+                  Abrir Interface de Controle Completa
                   <ExternalLink className="h-3 w-3" aria-hidden="true" />
                 </a>
               ) : (
@@ -813,10 +813,10 @@ export const AgentSettingsPanel = ({
                     type="button"
                     disabled
                   >
-                    Open Full Control UI
+                    Abrir Interface de Controle Completa
                   </button>
                   <div className="mt-2 text-[10px] text-muted-foreground/70">
-                    Control UI link unavailable for this gateway.
+                    Link da interface de controle indisponível para este gateway.
                   </div>
                 </>
               )}
@@ -825,21 +825,21 @@ export const AgentSettingsPanel = ({
             {canDelete ? (
               <section className="sidebar-section mt-8">
                 <div className="text-[11px] text-muted-foreground/68">
-                  Removes the agent from the gateway config and deletes its scheduled automations.
+                  Remove o agente da configuração do gateway e exclui suas automações programadas.
                 </div>
                 <button
                   className="sidebar-btn-ghost ui-btn-danger mt-3 inline-flex px-3 py-2 font-mono text-[10px] font-semibold tracking-[0.06em]"
                   type="button"
                   onClick={onDelete}
                 >
-                  Delete agent
+                  Excluir agente
                 </button>
               </section>
             ) : (
               <section className="sidebar-section mt-8">
-                <h3 className="sidebar-section-title">System agent</h3>
+                <h3 className="sidebar-section-title">Agente do sistema</h3>
                 <div className="mt-3 text-[11px] text-muted-foreground">
-                  The main agent is reserved and cannot be deleted.
+                  O agente principal é reservado e não pode ser excluído.
                 </div>
               </section>
             )}
@@ -851,7 +851,7 @@ export const AgentSettingsPanel = ({
           className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 p-4"
           role="dialog"
           aria-modal="true"
-          aria-label="Create automation"
+          aria-label="Criar automação"
           onClick={closeCronCreate}
         >
           <div
@@ -861,7 +861,7 @@ export const AgentSettingsPanel = ({
             <div className="flex items-start justify-between gap-3 px-6 py-5">
               <div className="min-w-0">
                 <div className="text-[11px] font-medium tracking-[0.01em] text-muted-foreground/80">
-                  Timed automation composer
+                  Compositor de automações programadas
                 </div>
                 <div className="mt-1 text-base font-semibold text-foreground">{timedAutomationStepMeta.title}</div>
               </div>
@@ -870,7 +870,7 @@ export const AgentSettingsPanel = ({
                 className="sidebar-btn-ghost px-3 font-mono text-[10px] font-semibold tracking-[0.06em]"
                 onClick={closeCronCreate}
               >
-                Close
+                Fechar
               </button>
             </div>
             <div className="space-y-4 px-5 py-5">
@@ -882,7 +882,7 @@ export const AgentSettingsPanel = ({
               {cronCreateStep === 0 ? (
                 <div className="space-y-3">
                   <div className="text-sm text-muted-foreground">
-                    Pick a template to start quickly, or choose Custom.
+                    Escolha um template para começar rapidamente, ou selecione Personalizado.
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {CRON_TEMPLATE_OPTIONS.map((option) => {
@@ -916,14 +916,14 @@ export const AgentSettingsPanel = ({
               {cronCreateStep === 1 ? (
                 <div className="space-y-3">
                   <div className="text-sm text-muted-foreground">
-                    Name this automation and describe what it should do.
+                    Nomeie esta automação e descreva o que ela deve fazer.
                   </div>
                   <label className="flex flex-col gap-1 text-[11px] text-muted-foreground">
                     <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em]">
-                      Automation name
+                      Nome da automação
                     </span>
                     <input
-                      aria-label="Automation name"
+                      aria-label="Nome da automação"
                       className="h-10 rounded-md border border-border bg-surface-3 px-3 text-sm text-foreground outline-none"
                       value={cronDraft.name}
                       onChange={(event) => updateCronDraft({ name: event.target.value })}
@@ -931,10 +931,10 @@ export const AgentSettingsPanel = ({
                   </label>
                   <label className="flex flex-col gap-1 text-[11px] text-muted-foreground">
                     <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em]">
-                      Task
+                      Tarefa
                     </span>
                     <textarea
-                      aria-label="Task"
+                      aria-label="Tarefa"
                       className="min-h-28 rounded-md border border-border bg-surface-3 px-3 py-2 text-sm text-foreground outline-none"
                       value={cronDraft.taskText}
                       onChange={(event) => updateCronDraft({ taskText: event.target.value })}
@@ -944,10 +944,10 @@ export const AgentSettingsPanel = ({
               ) : null}
               {cronCreateStep === 2 ? (
                 <div className="space-y-3">
-                  <div className="text-sm text-muted-foreground">Choose when this should run.</div>
+                  <div className="text-sm text-muted-foreground">Escolha quando esta automação deve rodar.</div>
                   <label className="flex flex-col gap-1 text-[11px] text-muted-foreground">
                     <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em]">
-                      Schedule type
+                      Tipo de agendamento
                     </span>
                     <select
                       className="h-10 rounded-md border border-border bg-surface-3 px-3 text-sm text-foreground outline-none"
@@ -956,15 +956,15 @@ export const AgentSettingsPanel = ({
                         updateCronDraft({ scheduleKind: event.target.value as CronCreateDraft["scheduleKind"] })
                       }
                     >
-                      <option value="every">Every</option>
-                      <option value="at">One time</option>
+                      <option value="every">A cada</option>
+                      <option value="at">Uma vez</option>
                     </select>
                   </label>
                   {cronDraft.scheduleKind === "every" ? (
                     <div className="grid gap-2 sm:grid-cols-2">
                       <label className="flex flex-col gap-1 text-[11px] text-muted-foreground">
                         <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em]">
-                          Every
+                          A cada
                         </span>
                         <input
                           type="number"
@@ -981,7 +981,7 @@ export const AgentSettingsPanel = ({
                       </label>
                       <label className="flex flex-col gap-1 text-[11px] text-muted-foreground">
                         <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em]">
-                          Unit
+                          Unidade
                         </span>
                         <select
                           className="h-10 rounded-md border border-border bg-surface-3 px-3 text-sm text-foreground outline-none"
@@ -992,16 +992,16 @@ export const AgentSettingsPanel = ({
                             })
                           }
                         >
-                          <option value="minutes">Minutes</option>
-                          <option value="hours">Hours</option>
-                          <option value="days">Days</option>
+                          <option value="minutes">Minutos</option>
+                          <option value="hours">Horas</option>
+                          <option value="days">Dias</option>
                         </select>
                       </label>
                       {cronDraft.everyUnit === "days" ? (
                         <>
                           <label className="flex flex-col gap-1 text-[11px] text-muted-foreground">
                             <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em]">
-                              Time of day
+                              Horário do dia
                             </span>
                             <input
                               type="time"
@@ -1012,7 +1012,7 @@ export const AgentSettingsPanel = ({
                           </label>
                           <label className="flex flex-col gap-1 text-[11px] text-muted-foreground">
                             <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em]">
-                              Timezone
+                              Fuso horário
                             </span>
                             <input
                               className="h-10 rounded-md border border-border bg-surface-3 px-3 text-sm text-foreground outline-none"
@@ -1027,7 +1027,7 @@ export const AgentSettingsPanel = ({
                   {cronDraft.scheduleKind === "at" ? (
                     <label className="flex flex-col gap-1 text-[11px] text-muted-foreground">
                       <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em]">
-                        Run at
+                        Executar em
                       </span>
                       <input
                         type="datetime-local"
@@ -1041,21 +1041,21 @@ export const AgentSettingsPanel = ({
               ) : null}
               {cronCreateStep === 3 ? (
                 <div className="space-y-3 text-sm text-muted-foreground">
-                  <div>Review details before creating this automation.</div>
+                  <div>Revise os detalhes antes de criar esta automação.</div>
                   <div className="ui-card px-3 py-2">
                     <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground">
-                      {cronDraft.name || "Untitled automation"}
+                      {cronDraft.name || "Automação sem título"}
                     </div>
-                    <div className="mt-1 text-[11px]">{cronDraft.taskText || "No task provided."}</div>
+                    <div className="mt-1 text-[11px]">{cronDraft.taskText || "Nenhuma tarefa fornecida."}</div>
                     <div className="mt-2 text-[11px]">
-                      Schedule:{" "}
+                      Agendamento:{" "}
                       {cronDraft.scheduleKind === "every"
-                        ? `Every ${cronDraft.everyAmount ?? 0} ${cronDraft.everyUnit ?? "minutes"}${
+                        ? `A cada ${cronDraft.everyAmount ?? 0} ${cronDraft.everyUnit ?? "minutos"}${
                             cronDraft.everyUnit === "days"
-                              ? ` at ${cronDraft.everyAtTime ?? ""} (${cronDraft.everyTimeZone ?? resolveLocalTimeZone()})`
+                              ? ` às ${cronDraft.everyAtTime ?? ""} (${cronDraft.everyTimeZone ?? resolveLocalTimeZone()})`
                               : ""
                           }`
-                        : `At ${cronDraft.scheduleAt ?? ""}`}
+                        : `Em ${cronDraft.scheduleAt ?? ""}`}
                     </div>
                   </div>
                 </div>
@@ -1063,7 +1063,7 @@ export const AgentSettingsPanel = ({
             </div>
             <div className="flex items-center justify-between gap-2 border-t border-border/50 px-5 pb-4 pt-5">
               <div className="text-[11px] text-muted-foreground">
-                {timedAutomationStepMeta.indicator} · Step {cronCreateStep + 1} of 4
+                {timedAutomationStepMeta.indicator} · Passo {cronCreateStep + 1} de 4
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -1072,7 +1072,7 @@ export const AgentSettingsPanel = ({
                   onClick={moveCronCreateBack}
                   disabled={cronCreateStep === 0 || cronCreateBusy}
                 >
-                  Back
+                  Voltar
                 </button>
                 {cronCreateStep < 3 ? (
                   <button
@@ -1085,7 +1085,7 @@ export const AgentSettingsPanel = ({
                       (cronCreateStep === 2 && !canMoveToReviewStep)
                     }
                   >
-                    Next
+                    Próximo
                   </button>
                 ) : null}
                 {cronCreateStep === 3 ? (
@@ -1097,7 +1097,7 @@ export const AgentSettingsPanel = ({
                     }}
                     disabled={cronCreateBusy || !canSubmitCronCreate}
                   >
-                    Create automation
+                    Criar automação
                   </button>
                 ) : null}
               </div>
@@ -1152,14 +1152,14 @@ const useAgentFilesEditor = (params: {
         savedAgentFilesRef.current = emptyState;
         setAgentFiles(emptyState);
         setAgentFilesDirty(false);
-        setAgentFilesError("Agent ID is missing for this agent.");
+        setAgentFilesError("ID do agente ausente.");
         return;
       }
       if (gatewayStatus !== "connected") {
         if (gatewayStatus === "connecting") {
           setAgentFilesError(null);
         } else {
-          setAgentFilesError("Gateway is not connected.");
+          setAgentFilesError("Gateway não está conectado.");
         }
         return;
       }
@@ -1181,7 +1181,7 @@ const useAgentFilesEditor = (params: {
       setAgentFiles(nextState);
       setAgentFilesDirty(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load agent files.";
+      const message = err instanceof Error ? err.message : "Falha ao carregar arquivos do agente.";
       setAgentFilesError(message);
     } finally {
       setAgentFilesLoading(false);
@@ -1194,11 +1194,11 @@ const useAgentFilesEditor = (params: {
     try {
       const trimmedAgentId = agentId?.trim();
       if (!trimmedAgentId) {
-        setAgentFilesError("Agent ID is missing for this agent.");
+        setAgentFilesError("ID do agente ausente.");
         return false;
       }
       if (gatewayStatus !== "connected") {
-        setAgentFilesError("Gateway is not connected.");
+        setAgentFilesError("Gateway não está conectado.");
         return false;
       }
       await Promise.all(
@@ -1222,7 +1222,7 @@ const useAgentFilesEditor = (params: {
       setAgentFilesDirty(false);
       return true;
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to save agent files.";
+      const message = err instanceof Error ? err.message : "Falha ao salvar arquivos do agente.";
       setAgentFilesError(message);
       return false;
     } finally {
@@ -1356,7 +1356,7 @@ export const AgentBrainPanel = ({
               disabled={agentFilesLoading || agentFilesSaving || !agentFilesDirty}
               onClick={discardAgentFileChanges}
             >
-              Discard
+              Descartar
             </button>
             <button
               type="button"
@@ -1366,14 +1366,14 @@ export const AgentBrainPanel = ({
                 void handleSave();
               }}
             >
-              Save
+              Salvar
             </button>
           </div>
 
           <div className="space-y-8 pb-8">
-            <AgentBrainPanelSection title="Persona">
+            <AgentBrainPanelSection title="Personalidade">
               <textarea
-                aria-label="Persona"
+                aria-label="Personalidade"
                 className="h-56 w-full resize-y rounded-md border border-border/80 bg-background px-4 py-3 font-mono text-sm leading-6 text-foreground outline-none"
                 value={agentFiles["SOUL.md"].content}
                 disabled={agentFilesLoading || agentFilesSaving}
@@ -1383,9 +1383,9 @@ export const AgentBrainPanel = ({
               />
             </AgentBrainPanelSection>
 
-            <AgentBrainPanelSection title="Directives">
+            <AgentBrainPanelSection title="Diretivas">
               <textarea
-                aria-label="Directives"
+                aria-label="Diretivas"
                 className="h-56 w-full resize-y rounded-md border border-border/80 bg-background px-4 py-3 font-mono text-sm leading-6 text-foreground outline-none"
                 value={agentFiles["AGENTS.md"].content}
                 disabled={agentFilesLoading || agentFilesSaving}
@@ -1395,9 +1395,9 @@ export const AgentBrainPanel = ({
               />
             </AgentBrainPanelSection>
 
-            <AgentBrainPanelSection title="Context">
+            <AgentBrainPanelSection title="Contexto">
               <textarea
-                aria-label="Context"
+                aria-label="Contexto"
                 className="h-56 w-full resize-y rounded-md border border-border/80 bg-background px-4 py-3 font-mono text-sm leading-6 text-foreground outline-none"
                 value={agentFiles["USER.md"].content}
                 disabled={agentFilesLoading || agentFilesSaving}
@@ -1408,10 +1408,10 @@ export const AgentBrainPanel = ({
             </AgentBrainPanelSection>
 
             <section className="space-y-3 border-t border-border/55 pt-8">
-              <h3 className="text-sm font-medium text-foreground">Identity</h3>
+              <h3 className="text-sm font-medium text-foreground">Identidade</h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="flex flex-col gap-2 text-xs text-muted-foreground">
-                  Name
+                  Nome
                   <input
                     className="h-10 rounded-md border border-border/80 bg-background px-3 text-sm text-foreground outline-none"
                     value={draft.identity.name}
@@ -1422,7 +1422,7 @@ export const AgentBrainPanel = ({
                   />
                 </label>
                 <label className="flex flex-col gap-2 text-xs text-muted-foreground">
-                  Creature
+                  Criatura
                   <input
                     className="h-10 rounded-md border border-border/80 bg-background px-3 text-sm text-foreground outline-none"
                     value={draft.identity.creature}
@@ -1433,7 +1433,7 @@ export const AgentBrainPanel = ({
                   />
                 </label>
                 <label className="flex flex-col gap-2 text-xs text-muted-foreground">
-                  Vibe
+                  Estilo
                   <input
                     className="h-10 rounded-md border border-border/80 bg-background px-3 text-sm text-foreground outline-none"
                     value={draft.identity.vibe}

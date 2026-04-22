@@ -59,20 +59,20 @@ const SCENARIO_ITEMS: Array<{
   {
     value: "same-computer",
     icon: Monitor,
-    title: "Same machine",
-    description: "Studio and OpenClaw both run locally.",
+    title: "Mesma máquina",
+    description: "Studio e OpenClaw rodam localmente.",
   },
   {
     value: "remote-gateway",
     icon: Cloud,
-    title: "Remote gateway",
-    description: "Studio on your laptop, OpenClaw in the cloud.",
+    title: "Gateway remoto",
+    description: "Studio no seu computador, OpenClaw na nuvem.",
   },
   {
     value: "same-cloud-host",
     icon: Server,
-    title: "Shared cloud host",
-    description: "Both run on the same remote machine.",
+    title: "Host remoto compartilhado",
+    description: "Ambos rodam na mesma máquina remota.",
   },
 ];
 
@@ -155,22 +155,22 @@ export const GatewayConnectScreen = ({
   }, [installContext]);
 
   const statusCopy = useMemo(() => {
-    if (status === "connected") return "Connected to OpenClaw gateway.";
-    if (status === "connecting") return "Connecting to OpenClaw…";
-    if (status === "reconnecting") return "Reconnecting to gateway…";
-    if (status === "error") return "Could not connect to the saved gateway settings.";
-    return "Configure Studio to reach your OpenClaw gateway.";
+    if (status === "connected") return "Conectado ao gateway OpenClaw.";
+    if (status === "connecting") return "Conectando ao OpenClaw…";
+    if (status === "reconnecting") return "Reconectando ao gateway…";
+    if (status === "error") return "Não foi possível conectar com as configurações salvas.";
+    return "Configure o Studio para alcançar o seu gateway OpenClaw.";
   }, [status]);
 
   const actionBusy = saving || testing || disconnecting;
-  const saveLabel = saving ? "Saving…" : "Save";
-  const testLabel = testing ? "Testing…" : "Test";
-  const disconnectLabel = disconnecting ? "Disconnecting…" : "Disconnect";
+  const saveLabel = saving ? "Salvando…" : "Salvar";
+  const testLabel = testing ? "Testando…" : "Testar";
+  const disconnectLabel = disconnecting ? "Desconectando…" : "Desconectar";
   const tokenHelper = hasStoredToken
-    ? "A token is stored on this host. Leave blank to keep it."
+    ? "Token armazenado disponível neste host. Deixe em branco para manter."
     : localGatewayDefaultsHasToken
-      ? "A local OpenClaw token was detected. Leave blank to use it."
-      : "Enter the gateway token Studio should use.";
+      ? "Token local do OpenClaw detectado. Deixe em branco para usá-lo."
+      : "Insira o token do gateway que o Studio deve usar.";
   const remoteStudio = isStudioLikelyRemote(installContext);
 
   const setScenario = (value: StudioSetupScenario) => {
@@ -204,7 +204,7 @@ export const GatewayConnectScreen = ({
           className="font-mono text-[10px] text-white/30 hover:text-white/60 transition-colors"
           onClick={() => void copyCommand(params.value)}
         >
-          {copyStatus === "copied" ? "Copied!" : copyStatus === "failed" ? "Failed" : "Copy"}
+          {copyStatus === "copied" ? "Copiado!" : copyStatus === "failed" ? "Falhou" : "Copiar"}
         </button>
       </div>
       <div className="ui-command-surface flex items-center gap-2 rounded px-3 py-2">
@@ -251,7 +251,7 @@ export const GatewayConnectScreen = ({
           {statusReason && (
             <p className="mt-0.5 text-xs text-white/35">
               {statusReason === "gateway_closed"
-                ? "The gateway socket closed. Studio will keep retrying."
+                ? "O socket do gateway foi fechado. O Studio continuará tentando reconectar."
                 : statusReason}
             </p>
           )}
@@ -305,43 +305,43 @@ export const GatewayConnectScreen = ({
           style={{ borderColor: "#1a1a1a", background: "#0c0c0c" }}
         >
           <p className="font-mono text-[10px] font-semibold tracking-[0.08em] text-white/30 uppercase">
-            How you open Studio
+            Como abrir o Studio
           </p>
           {selectedScenario === "same-computer" || selectedScenario === "remote-gateway" ? (
             <div className="space-y-2">
               <p className="text-xs text-white/50">
-                Open{" "}
-                <code className="font-mono text-white/70">http://localhost:3000</code> on this
-                machine.
+                Abra{" "}
+                <code className="font-mono text-white/70">http://localhost:3000</code> nesta
+                máquina.
               </p>
               <p className="text-[11px] text-white/25">
-                Only the OpenClaw upstream changes in this setup.
+                Apenas o upstream do OpenClaw muda nesta configuração.
               </p>
             </div>
           ) : (
             <div className="space-y-3">
               <p className="text-xs text-white/50">
-                Studio is on a remote host.{" "}
-                <code className="font-mono text-white/70">localhost:3000</code> only opens there.
+                Studio está em um host remoto.{" "}
+                <code className="font-mono text-white/70">localhost:3000</code> só funciona lá.
               </p>
               {commandField({
                 value: studioServeCommand,
-                label: "Tailscale Serve (recommended)",
-                helper: `Then open ${studioOpenUrl} from your browser.`,
+                label: "Tailscale Serve (recomendado)",
+                helper: `Então abra ${studioOpenUrl} no navegador.`,
               })}
               {commandField({
                 value: studioTunnelCommand,
-                label: "SSH tunnel (fallback)",
+                label: "Túnel SSH (alternativo)",
               })}
               {remoteStudio && installContext.tailscale.loggedIn === false ? (
                 <p className="text-[11px] text-white/30">
-                  Tailscale not detected. Tailscale Serve is usually easier than public binds.
+                  Tailscale não detectado. Tailscale Serve costuma ser mais fácil que bind público.
                 </p>
               ) : null}
               {installContext.studioHost.publicHosts.length > 0 ? (
                 <p className="text-[11px] text-white/30">
-                  Studio is bound beyond loopback.{" "}
-                  <code className="font-mono">STUDIO_ACCESS_TOKEN</code> is required.
+                  Studio vinculado além do loopback.{" "}
+                  <code className="font-mono">STUDIO_ACCESS_TOKEN</code> é obrigatório.
                 </p>
               ) : null}
             </div>
@@ -353,40 +353,40 @@ export const GatewayConnectScreen = ({
           style={{ borderColor: "#1a1a1a", background: "#0c0c0c" }}
         >
           <p className="font-mono text-[10px] font-semibold tracking-[0.08em] text-white/30 uppercase">
-            How Studio reaches OpenClaw
+            Como o Studio acessa o OpenClaw
           </p>
           {selectedScenario === "remote-gateway" ? (
             <div className="space-y-3">
               <p className="text-xs text-white/50">
-                Keep the remote gateway on loopback and expose it with Tailscale Serve.
+                Mantenha o gateway remoto no loopback e exponha com Tailscale Serve.
               </p>
               {commandField({
                 value: gatewayServeCommand,
-                label: "On the gateway host",
-                helper: `In Studio, use wss://<gateway>.ts.net + your token.`,
+                label: "No host do gateway",
+                helper: `No Studio, use wss://<gateway>.ts.net + seu token.`,
               })}
               {commandField({
                 value: gatewayTunnelCommand,
-                label: "SSH tunnel (fallback)",
-                helper: `Point Studio at ws://localhost:${localPort}.`,
+                label: "Túnel SSH (alternativo)",
+                helper: `Aponte o Studio para ws://localhost:${localPort}.`,
               })}
               <button
                 type="button"
                 className="ui-btn-secondary h-8 px-3 text-xs"
                 onClick={applyLoopbackUrl}
               >
-                Use SSH tunnel URL
+                Usar URL do túnel SSH
               </button>
             </div>
           ) : (
             <div className="space-y-3">
               <p className="text-xs text-white/50">
-                Keep upstream local:{" "}
+                Mantenha upstream local:{" "}
                 <code className="font-mono text-white/70">{`ws://localhost:${localPort}`}</code>
               </p>
               {commandField({
                 value: localGatewayCommand,
-                label: "Start OpenClaw on this host",
+                label: "Iniciar OpenClaw neste host",
               })}
               <div className="flex flex-wrap gap-2">
                 <button
@@ -394,7 +394,7 @@ export const GatewayConnectScreen = ({
                   className="ui-btn-secondary h-8 px-3 text-xs"
                   onClick={applyLoopbackUrl}
                 >
-                  Use localhost
+                  Usar localhost
                 </button>
                 {localGatewayDefaults ? (
                   <button
@@ -402,13 +402,13 @@ export const GatewayConnectScreen = ({
                     className="ui-btn-secondary h-8 px-3 text-xs"
                     onClick={onUseLocalDefaults}
                   >
-                    Use local defaults
+                    Usar padrões locais
                   </button>
                 ) : null}
               </div>
               {localGatewayDefaults ? (
                 <p className="text-[11px] text-white/30">
-                  Local OpenClaw settings detected at{" "}
+                  Configurações locais do OpenClaw detectadas em{" "}
                   <code className="font-mono">~/.openclaw/openclaw.json</code>.
                 </p>
               ) : null}
@@ -446,19 +446,19 @@ export const GatewayConnectScreen = ({
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="font-mono text-[10px] font-semibold tracking-[0.08em] text-white/30 uppercase">
-              Connection settings
+              Configurações de conexão
             </p>
-            <p className="mt-0.5 text-xs text-white/45">Gateway URL and access token.</p>
+            <p className="mt-0.5 text-xs text-white/45">URL do gateway e token de acesso.</p>
           </div>
           {hasUnsavedChanges && (
-            <span className="font-mono text-[10px] text-amber-400/70">Unsaved changes</span>
+            <span className="font-mono text-[10px] text-amber-400/70">Alterações não salvas</span>
           )}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-[1.4fr_1fr]">
           <label className="flex flex-col gap-1.5">
             <span className="font-mono text-[10px] font-semibold tracking-[0.06em] text-white/35 uppercase">
-              Upstream URL
+              URL do gateway
             </span>
             <input
               className="ui-input h-9 rounded px-3 font-mono text-[13px] outline-none"
@@ -486,15 +486,15 @@ export const GatewayConnectScreen = ({
                 onChange={(event) => onTokenChange(event.target.value)}
                 placeholder={
                   hasStoredToken || localGatewayDefaultsHasToken
-                    ? "keep existing"
-                    : "gateway token"
+                    ? "manter existente"
+                    : "token do gateway"
                 }
                 spellCheck={false}
               />
               <button
                 type="button"
                 className="absolute inset-y-0 right-1 my-auto flex h-7 w-7 items-center justify-center rounded text-white/30 hover:text-white/60"
-                aria-label={showToken ? "Hide token" : "Show token"}
+                aria-label={showToken ? "Ocultar token" : "Mostrar token"}
                 onClick={() => setShowToken((prev) => !prev)}
               >
                 {showToken ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}

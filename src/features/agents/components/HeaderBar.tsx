@@ -61,42 +61,43 @@ export const HeaderBar = ({
         >
           Draak
         </span>
+
       </div>
 
       {/* right: status + actions */}
       <div className="flex items-center gap-1.5">
         {/* nav buttons */}
         {onGoHome ? (
-          <Tooltip text="Go to home / agent list" side="bottom">
+          <Tooltip text="Ir para início / lista de agentes" side="bottom">
             <button
               type="button"
               className="ui-btn-icon ui-btn-icon-xs"
               onClick={onGoHome}
-              aria-label="Go home"
+              aria-label="Ir para início"
             >
               <Home className="h-3.5 w-3.5" />
             </button>
           </Tooltip>
         ) : null}
         {onOpenFilesPanel ? (
-          <Tooltip text="File vault — uploads & favorites" side="bottom">
+          <Tooltip text="Cofre de arquivos — uploads e favoritos" side="bottom">
             <button
               type="button"
               className="ui-btn-icon ui-btn-icon-xs"
               onClick={onOpenFilesPanel}
-              aria-label="Open file vault"
+              aria-label="Abrir cofre de arquivos"
             >
               <FolderOpen className="h-3.5 w-3.5" />
             </button>
           </Tooltip>
         ) : null}
         {onOpenAnalytics ? (
-          <Tooltip text="System monitor & analytics" side="bottom">
+          <Tooltip text="Monitor do sistema e análises" side="bottom">
             <button
               type="button"
               className="ui-btn-icon ui-btn-icon-xs"
               onClick={onOpenAnalytics}
-              aria-label="Open analytics"
+              aria-label="Abrir análises"
             >
               <BarChart2 className="h-3.5 w-3.5" />
             </button>
@@ -138,7 +139,7 @@ export const HeaderBar = ({
               aria-haspopup="menu"
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((prev) => !prev)}
-              title="Gateway settings"
+              title="Configurações do gateway"
             >
               <Plug className="h-3.5 w-3.5" />
               <span className="sr-only">Open studio menu</span>
@@ -159,7 +160,7 @@ export const HeaderBar = ({
                   data-testid="gateway-settings-toggle"
                 >
                   <Plug className="h-3.5 w-3.5" />
-                  Gateway connection
+                  Configurações do gateway
                 </button>
               </div>
             ) : null}

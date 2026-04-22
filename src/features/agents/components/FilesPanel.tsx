@@ -64,8 +64,8 @@ function FileRow({
           type="button"
           className="ui-btn-icon ui-btn-icon-xs"
           onClick={onToggleFavorite}
-          aria-label={file.favorite ? "Remove from favorites" : "Add to favorites"}
-          title={file.favorite ? "Remove from favorites" : "Add to favorites"}
+          aria-label={file.favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+          title={file.favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
         >
           <Star
             className={`h-3.5 w-3.5 transition-colors ${
@@ -79,8 +79,8 @@ function FileRow({
             type="button"
             className="ui-btn-icon ui-btn-icon-xs"
             onClick={onDownload}
-            aria-label="Download file"
-            title="Download"
+            aria-label="Baixar arquivo"
+            title="Baixar"
           >
             <Download className="h-3.5 w-3.5" />
           </button>
@@ -88,8 +88,8 @@ function FileRow({
             type="button"
             className="ui-btn-icon ui-btn-icon-xs"
             onClick={onDelete}
-            aria-label="Delete file"
-            title="Delete"
+            aria-label="Excluir arquivo"
+            title="Excluir"
           >
             <Trash2 className="h-3.5 w-3.5 text-red-400/70" />
           </button>
@@ -194,13 +194,13 @@ export const FilesPanel = ({ open, onClose }: FilesPanelProps) => {
           style={{ borderColor: "#27272a" }}
         >
           <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white/50">
-            File Vault
+            Cofre de Arquivos
           </span>
           <button
             type="button"
             className="ui-btn-icon ui-btn-icon-xs"
             onClick={onClose}
-            aria-label="Close files panel"
+            aria-label="Fechar painel de arquivos"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -211,7 +211,7 @@ export const FilesPanel = ({ open, onClose }: FilesPanelProps) => {
           {all.length === 0 ? (
             <div className="flex flex-col items-center justify-center flex-1 py-16 text-center">
               <Paperclip className="mb-3 h-8 w-8 text-white/15" />
-              <p className="font-mono text-[12px] text-white/30">No files saved yet.</p>
+              <p className="font-mono text-[12px] text-white/30">Nenhum arquivo salvo ainda.</p>
             </div>
           ) : (
             <>
@@ -220,7 +220,7 @@ export const FilesPanel = ({ open, onClose }: FilesPanelProps) => {
                   <div className="mb-1 flex items-center gap-2 px-3 py-1">
                     <Star className="h-3 w-3 text-yellow-400/70 fill-yellow-400/70" />
                     <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-white/35">
-                      Favorites
+                      Favoritos
                     </span>
                   </div>
                   {favorites.map((file) => (
@@ -238,7 +238,7 @@ export const FilesPanel = ({ open, onClose }: FilesPanelProps) => {
               <div>
                 <div className="mb-1 flex items-center gap-2 px-3 py-1">
                   <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-white/35">
-                    All Files
+                    Todos os Arquivos
                   </span>
                   <span className="font-mono text-[10px] text-white/25">{all.length}</span>
                 </div>
@@ -275,7 +275,7 @@ export const FilesPanel = ({ open, onClose }: FilesPanelProps) => {
             onClick={() => fileInputRef.current?.click()}
           >
             <Paperclip className="h-3.5 w-3.5" />
-            Upload file
+            Enviar arquivo
           </button>
         </div>
       </div>
